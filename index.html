@@ -2,1385 +2,567 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Checkin TH">
-<meta name="theme-color" content="#0a0f1a">
-<meta name="description" content="บันทึกการเดินทางทั่วไทย">
+<meta name="theme-color" content="#0b1120">
 <title>Checkin TH</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
 <style>
-/* ══════════════════════════════════════════════
-   DESIGN TOKENS
-══════════════════════════════════════════════ */
-:root {
-  --ink:       #0a0f1a;
-  --ink2:      #111827;
-  --ink3:      #1a2235;
-  --surface:   #1e2a3d;
-  --surface2:  #243044;
-  --rim:       rgba(255,255,255,0.07);
-  --rim2:      rgba(255,255,255,0.12);
-
-  --jade:      #00e5a0;
-  --jade2:     #00c88a;
-  --jade3:     rgba(0,229,160,0.12);
-  --jade-glow: 0 0 24px rgba(0,229,160,0.3);
-
-  --amber:     #ffb830;
-  --rose:      #ff5f7e;
-  --sky:       #38bdf8;
-  --lavender:  #a78bfa;
-
-  --txt:       #f0f4ff;
-  --txt2:      #8899b4;
-  --txt3:      #4a5a74;
-
-  --r-sm: 12px;
-  --r-md: 16px;
-  --r-lg: 24px;
-  --r-xl: 32px;
-
-  --nav-h: 64px;
-  --topbar-h: 56px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bot: env(safe-area-inset-bottom, 0px);
-
-  --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease2: cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-/* ══════════════════════════════════════════════
-   RESET & BASE
-══════════════════════════════════════════════ */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-html, body {
-  height: 100%; width: 100%;
-  overflow: hidden;
-  background: var(--ink);
-  color: var(--txt);
-  font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 15px;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ══════════════════════════════════════════════
-   BACKGROUND ATMOSPHERE
-══════════════════════════════════════════════ */
-body::before {
-  content: '';
-  position: fixed; inset: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0,229,160,0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 110%, rgba(56,189,248,0.05) 0%, transparent 60%);
-  pointer-events: none; z-index: 0;
-}
-
-/* ══════════════════════════════════════════════
-   APP SHELL
-══════════════════════════════════════════════ */
-#app {
-  position: fixed; inset: 0;
-  display: flex; flex-direction: column;
-  padding-top: var(--safe-top);
-}
-
-/* ══════════════════════════════════════════════
-   TOPBAR
-══════════════════════════════════════════════ */
-#topbar {
-  height: var(--topbar-h);
-  background: rgba(10,15,26,0.85);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--rim);
-  display: flex; align-items: center;
-  padding: 0 16px; gap: 10px;
-  flex-shrink: 0; z-index: 100;
-  position: relative;
-}
-
-.tb-logo {
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 700; font-size: 18px;
-  color: var(--txt); letter-spacing: -0.5px;
-  flex-shrink: 0;
-}
-
-.tb-logo-dot {
-  width: 28px; height: 28px;
-  background: linear-gradient(135deg, var(--jade), var(--sky));
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-}
-
-.tb-search {
-  flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: 12px;
-  display: flex; align-items: center;
-  padding: 0 12px; gap: 8px;
-  transition: border-color 0.2s;
-}
-.tb-search:focus-within { border-color: var(--jade2); }
-.tb-search input {
-  flex: 1; background: none; border: none; outline: none;
-  color: var(--txt); font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 13px; padding: 9px 0;
-}
-.tb-search input::placeholder { color: var(--txt3); }
-
-.tb-sync {
-  width: 36px; height: 36px;
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0;
-  font-size: 16px;
-  transition: all 0.2s;
-}
-.tb-sync:hover { border-color: var(--jade); }
-.tb-sync.syncing { animation: spin 1s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.tb-avatar {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--jade3), rgba(56,189,248,0.15));
-  border: 1.5px solid var(--jade2);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: var(--jade);
-  cursor: pointer; flex-shrink: 0;
-  transition: transform 0.2s var(--ease);
-}
-.tb-avatar:active { transform: scale(0.9); }
-
-/* ══════════════════════════════════════════════
-   SYNC STATUS BAR
-══════════════════════════════════════════════ */
-#sync-bar {
-  height: 0; overflow: hidden;
-  background: var(--jade3);
-  border-bottom: 1px solid rgba(0,229,160,0.2);
-  display: flex; align-items: center;
-  padding: 0 16px; gap: 8px;
-  font-size: 12px; color: var(--jade);
-  transition: height 0.3s var(--ease2);
-}
-#sync-bar.show { height: 32px; }
-
-/* ══════════════════════════════════════════════
-   CONTENT AREA
-══════════════════════════════════════════════ */
-#content {
-  flex: 1; position: relative; overflow: hidden;
-}
-
-/* ══════════════════════════════════════════════
-   BOTTOM NAV
-══════════════════════════════════════════════ */
-#bottom-nav {
-  height: var(--nav-h);
-  padding-bottom: var(--safe-bot);
-  background: rgba(10,15,26,0.92);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid var(--rim);
-  display: flex; align-items: stretch;
-  flex-shrink: 0; z-index: 100;
-}
-
-.nav-btn {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 3px; cursor: pointer;
-  background: none; border: none;
-  color: var(--txt3);
-  transition: color 0.2s;
-  position: relative;
-  padding-top: 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.nav-btn.active { color: var(--jade); }
-
-.nav-btn .nav-icon {
-  font-size: 22px;
-  transition: transform 0.3s var(--ease);
-}
-.nav-btn.active .nav-icon { transform: translateY(-2px); }
-
-.nav-btn .nav-label {
-  font-size: 10px; font-weight: 500;
-  letter-spacing: 0.2px;
-}
-
-.nav-btn.active::after {
-  content: '';
-  position: absolute; top: 0; left: 50%;
-  transform: translateX(-50%);
-  width: 32px; height: 2.5px;
-  background: var(--jade);
-  border-radius: 0 0 3px 3px;
-  animation: slideIn 0.3s var(--ease);
-}
-@keyframes slideIn { from { width: 0; } }
-
-/* FAB for check-in */
-.nav-btn.fab-btn {
-  flex: none; width: 64px;
-}
-.nav-btn.fab-btn .nav-icon {
-  width: 48px; height: 48px;
-  background: linear-gradient(135deg, var(--jade), var(--jade2));
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
-  box-shadow: 0 4px 20px rgba(0,229,160,0.4);
-  transition: all 0.3s var(--ease);
-}
-.nav-btn.fab-btn:active .nav-icon { transform: scale(0.9); }
-.nav-btn.fab-btn .nav-label { color: var(--jade); }
-
-/* ══════════════════════════════════════════════
-   PANELS
-══════════════════════════════════════════════ */
-.panel {
-  position: absolute; inset: 0;
-  overflow-y: auto; overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  opacity: 0; pointer-events: none;
-  transform: translateY(8px);
-  transition: opacity 0.25s, transform 0.25s var(--ease2);
-  display: flex; flex-direction: column;
-}
-
-.panel.active {
-  opacity: 1; pointer-events: all;
-  transform: translateY(0);
-}
-
-/* ══════════════════════════════════════════════
-   MAP PANEL
-══════════════════════════════════════════════ */
-#panel-map { overflow: hidden; }
-
-#map {
-  position: absolute; inset: 0;
-}
-
-.leaflet-container { background: #0d1524 !important; }
-
-/* Map Cards */
-.map-stats-strip {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  z-index: 400;
-  background: linear-gradient(0deg, rgba(10,15,26,0.97) 0%, rgba(10,15,26,0.8) 70%, transparent 100%);
-  padding: 40px 16px 16px;
-}
-
-.map-quick-stats {
-  display: flex; gap: 8px;
-  overflow-x: auto; padding-bottom: 4px;
-  scrollbar-width: none;
-}
-.map-quick-stats::-webkit-scrollbar { display: none; }
-
-.qs-pill {
-  flex-shrink: 0;
-  background: rgba(30,42,61,0.9);
-  border: 1px solid var(--rim2);
-  border-radius: 12px;
-  padding: 8px 14px;
-  display: flex; align-items: center; gap: 6px;
-  font-size: 13px; white-space: nowrap;
-}
-.qs-pill .qs-num { font-weight: 700; color: var(--jade); font-size: 15px; }
-
-/* Floating map button */
-.map-fab {
-  position: absolute; top: 12px; right: 12px; z-index: 400;
-  width: 44px; height: 44px;
-  background: rgba(30,42,61,0.9);
-  border: 1px solid var(--rim2);
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: all 0.2s;
-}
-.map-fab:active { transform: scale(0.9); }
-
-/* ══════════════════════════════════════════════
-   CHECK-IN PANEL
-══════════════════════════════════════════════ */
-.ci-hero {
-  background: linear-gradient(160deg, var(--ink3) 0%, var(--ink2) 100%);
-  padding: 24px 20px 20px;
-  border-bottom: 1px solid var(--rim);
-}
-
-.ci-hero-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 24px; font-weight: 700;
-  color: var(--txt); margin-bottom: 4px;
-}
-
-.ci-hero-sub { font-size: 13px; color: var(--txt2); }
-
-.ci-form {
-  padding: 16px 16px 100px;
-  display: flex; flex-direction: column; gap: 12px;
-}
-
-/* Form field */
-.field {
-  display: flex; flex-direction: column; gap: 6px;
-}
-.field label {
-  font-size: 11px; font-weight: 600;
-  color: var(--txt3); text-transform: uppercase;
-  letter-spacing: 0.8px; padding-left: 2px;
-}
-
-.field input, .field select, .field textarea {
-  background: var(--surface);
-  border: 1.5px solid var(--rim);
-  border-radius: var(--r-sm);
-  padding: 13px 14px;
-  color: var(--txt);
-  font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 15px; outline: none;
-  width: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  -webkit-appearance: none; appearance: none;
-}
-.field input:focus, .field select:focus, .field textarea:focus {
-  border-color: var(--jade2);
-  box-shadow: 0 0 0 3px rgba(0,229,160,0.1);
-}
-.field textarea { resize: none; min-height: 80px; line-height: 1.6; }
-.field select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238899b4' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
-
-/* Autocomplete dropdown */
-.ac-drop {
-  background: var(--surface2);
-  border: 1.5px solid var(--rim2);
-  border-radius: var(--r-sm);
-  overflow: hidden; display: none;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  max-height: 200px; overflow-y: auto;
-}
-.ac-drop.open { display: block; }
-.ac-item {
-  padding: 12px 14px;
-  cursor: pointer;
-  border-bottom: 1px solid var(--rim);
-  transition: background 0.15s;
-  display: flex; align-items: center; gap: 10px;
-}
-.ac-item:last-child { border: none; }
-.ac-item:active { background: var(--ink3); }
-.ac-item-icon { font-size: 18px; flex-shrink: 0; }
-.ac-item-main { font-size: 14px; font-weight: 500; color: var(--txt); }
-.ac-item-sub { font-size: 12px; color: var(--txt2); }
-
-/* 2-col grid */
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-/* Type selector chips */
-.type-chips {
-  display: flex; gap: 8px; flex-wrap: wrap;
-}
-.type-chip {
-  padding: 8px 14px;
-  background: var(--surface);
-  border: 1.5px solid var(--rim);
-  border-radius: 20px;
-  font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 13px; color: var(--txt2);
-  cursor: pointer; transition: all 0.2s;
-  display: flex; align-items: center; gap: 5px;
-  -webkit-tap-highlight-color: transparent;
-}
-.type-chip.selected {
-  background: var(--jade3);
-  border-color: var(--jade2);
-  color: var(--jade);
-}
-
-/* Rating stars */
-.stars {
-  display: flex; gap: 6px;
-}
-.star {
-  font-size: 28px; cursor: pointer;
-  transition: transform 0.15s var(--ease);
-  filter: grayscale(1) opacity(0.4);
-}
-.star.on { filter: none; transform: scale(1.1); }
-
-/* Weather chips */
-.weather-chips {
-  display: flex; gap: 8px; flex-wrap: wrap;
-}
-.weather-chip {
-  padding: 8px 14px;
-  background: var(--surface);
-  border: 1.5px solid var(--rim);
-  border-radius: 20px;
-  font-size: 14px; cursor: pointer;
-  transition: all 0.2s;
-  -webkit-tap-highlight-color: transparent;
-}
-.weather-chip.selected {
-  background: rgba(56,189,248,0.1);
-  border-color: var(--sky);
-}
-
-/* Submit button */
-.btn-submit {
-  width: 100%; padding: 16px;
-  background: linear-gradient(135deg, var(--jade), var(--jade2));
-  border: none; border-radius: var(--r-md);
-  color: var(--ink); font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 16px; font-weight: 700;
-  cursor: pointer; letter-spacing: 0.2px;
-  box-shadow: 0 4px 20px rgba(0,229,160,0.3);
-  transition: all 0.2s var(--ease);
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-}
-.btn-submit:active { transform: scale(0.97); box-shadow: none; }
-
-/* Expense input wrapper */
-.expense-wrap {
-  position: relative;
-}
-.expense-wrap input { padding-right: 50px; }
-.expense-unit {
-  position: absolute; right: 14px; top: 50%;
-  transform: translateY(-50%);
-  font-size: 13px; color: var(--txt2); pointer-events: none;
-}
-
-/* ══════════════════════════════════════════════
-   HOME / STATS PANEL
-══════════════════════════════════════════════ */
-#panel-home {
-  padding: 0 0 80px;
-}
-
-.home-hero {
-  padding: 20px 20px 0;
-  background: linear-gradient(160deg, var(--ink3) 0%, var(--ink) 100%);
-}
-
-.home-greeting {
-  font-size: 13px; color: var(--txt2); margin-bottom: 2px;
-}
-.home-name {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 26px; font-weight: 700;
-  color: var(--txt); margin-bottom: 16px;
-  line-height: 1.2;
-}
-.home-name span { color: var(--jade); }
-
-/* XP Strip */
-.xp-strip {
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-md);
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  display: flex; align-items: center; gap: 12px;
-}
-
-.xp-lv {
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, rgba(0,229,160,0.2), rgba(56,189,248,0.2));
-  border: 2px solid var(--jade2);
-  border-radius: 12px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.xp-lv .lv-text { font-size: 8px; font-weight: 700; color: var(--jade); letter-spacing: 1px; }
-.xp-lv .lv-num { font-size: 18px; font-weight: 800; color: var(--jade); line-height: 1; font-family: 'Space Grotesk', sans-serif; }
-
-.xp-info { flex: 1; min-width: 0; }
-.xp-title { font-size: 12px; color: var(--amber); font-weight: 500; margin-bottom: 6px; }
-.xp-bar-bg { height: 5px; background: var(--ink2); border-radius: 3px; overflow: hidden; }
-.xp-bar { height: 5px; background: linear-gradient(90deg, var(--jade2), var(--sky)); border-radius: 3px; transition: width 0.8s var(--ease2); }
-.xp-nums { font-size: 11px; color: var(--txt3); margin-top: 4px; }
-
-/* Stats grid */
-.stats-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 10px; padding: 0 16px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-md);
-  padding: 16px;
-  transition: transform 0.2s var(--ease);
-}
-.stat-card:active { transform: scale(0.97); }
-
-.sc-icon { font-size: 22px; margin-bottom: 8px; }
-.sc-val {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 28px; font-weight: 700;
-  color: var(--txt); line-height: 1;
-  margin-bottom: 3px;
-}
-.sc-label { font-size: 12px; color: var(--txt2); }
-.sc-sub { font-size: 11px; color: var(--txt3); margin-top: 2px; }
-
-/* Section title */
-.sec-title {
-  font-size: 12px; font-weight: 700;
-  color: var(--txt2); text-transform: uppercase;
-  letter-spacing: 1px; padding: 20px 20px 10px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.sec-title a { color: var(--jade); font-size: 12px; text-decoration: none; font-weight: 500; text-transform: none; letter-spacing: 0; cursor: pointer; }
-
-/* Recent checkin cards */
-.recent-list { padding: 0 16px; }
-
-.recent-card {
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-md);
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  display: flex; gap: 12px; align-items: flex-start;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-.recent-card:active { transform: scale(0.98); }
-
-.rc-icon {
-  width: 42px; height: 42px;
-  background: var(--surface2);
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
-}
-
-.rc-body { flex: 1; min-width: 0; }
-.rc-place { font-size: 15px; font-weight: 600; color: var(--txt); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rc-meta { font-size: 12px; color: var(--txt2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.rc-province { color: var(--jade); font-weight: 500; }
-.rc-stars { font-size: 11px; letter-spacing: -2px; }
-
-/* Region progress */
-.region-list { padding: 0 16px; }
-
-.region-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 14px;
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-sm);
-  margin-bottom: 8px;
-}
-
-.reg-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
-.reg-info { flex: 1; }
-.reg-name { font-size: 13px; font-weight: 500; color: var(--txt); margin-bottom: 4px; }
-.reg-bar-bg { height: 4px; background: var(--ink2); border-radius: 2px; overflow: hidden; }
-.reg-bar { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--jade2), var(--sky)); transition: width 0.8s var(--ease2); }
-.reg-count { font-size: 12px; color: var(--txt2); white-space: nowrap; min-width: 40px; text-align: right; font-family: 'Space Grotesk', sans-serif; font-weight: 600; }
-
-/* ══════════════════════════════════════════════
-   TRIPS PANEL
-══════════════════════════════════════════════ */
-#panel-trips { padding: 0 0 80px; }
-
-.trips-header {
-  padding: 20px 20px 16px;
-  display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--rim);
-}
-
-.trips-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 20px; font-weight: 700; color: var(--txt);
-}
-
-.btn-new-trip {
-  background: var(--jade3);
-  border: 1.5px solid var(--jade2);
-  border-radius: 10px;
-  padding: 8px 14px;
-  color: var(--jade); font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer; display: flex; align-items: center; gap: 5px;
-  transition: all 0.2s;
-}
-.btn-new-trip:active { transform: scale(0.95); }
-
-.trips-list { padding: 12px 16px; }
-
-.trip-card {
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-md);
-  padding: 16px;
-  margin-bottom: 12px;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-.trip-card:active { transform: scale(0.99); }
-
-.tc-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
-.tc-icon {
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, rgba(0,229,160,0.15), rgba(56,189,248,0.15));
-  border: 1px solid rgba(0,229,160,0.2);
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
-}
-.tc-name { font-size: 16px; font-weight: 700; color: var(--txt); margin-bottom: 3px; }
-.tc-dates { font-size: 12px; color: var(--txt2); }
-.tc-del { margin-left: auto; width: 32px; height: 32px; background: rgba(255,95,126,0.1); border: 1px solid rgba(255,95,126,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; flex-shrink: 0; color: var(--rose); }
-
-.tc-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.tc-badge {
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px; font-weight: 500;
-  display: flex; align-items: center; gap: 4px;
-}
-.tcb-days { background: rgba(56,189,248,0.1); color: var(--sky); border: 1px solid rgba(56,189,248,0.2); }
-.tcb-ci { background: rgba(167,139,250,0.1); color: var(--lavender); border: 1px solid rgba(167,139,250,0.2); }
-.tcb-prov { background: var(--jade3); color: var(--jade); border: 1px solid rgba(0,229,160,0.2); }
-.tcb-exp { background: rgba(255,184,48,0.1); color: var(--amber); border: 1px solid rgba(255,184,48,0.2); }
-
-.tc-places { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rim); }
-.tc-places-title { font-size: 11px; color: var(--txt3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
-.tc-places-list { display: flex; flex-wrap: wrap; gap: 5px; }
-.tc-place-tag { font-size: 12px; padding: 3px 8px; background: var(--surface2); border: 1px solid var(--rim); border-radius: 6px; color: var(--txt2); }
-
-/* ══════════════════════════════════════════════
-   MORE PANEL (Timeline, Analytics, Photos, etc.)
-══════════════════════════════════════════════ */
-#panel-more { padding: 0 0 80px; }
-
-.more-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 12px; padding: 16px;
-}
-
-.more-tile {
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-md);
-  padding: 20px 16px;
-  cursor: pointer;
-  transition: all 0.2s var(--ease);
-  text-align: left;
-}
-.more-tile:active { transform: scale(0.95); }
-.more-tile .mt-icon { font-size: 28px; margin-bottom: 10px; }
-.more-tile .mt-name { font-size: 14px; font-weight: 600; color: var(--txt); margin-bottom: 3px; }
-.more-tile .mt-desc { font-size: 12px; color: var(--txt2); line-height: 1.5; }
-.more-tile.highlight { border-color: rgba(0,229,160,0.3); background: linear-gradient(135deg, rgba(0,229,160,0.05), var(--surface)); }
-
-/* ══════════════════════════════════════════════
-   SUB-PANELS (Timeline, Analytics, etc.)
-══════════════════════════════════════════════ */
-.sub-panel {
-  position: fixed; inset: 0;
-  background: var(--ink);
-  z-index: 200;
-  display: flex; flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.35s var(--ease2);
-  padding-top: var(--safe-top);
-}
-.sub-panel.open { transform: translateX(0); }
-
-.sub-header {
-  height: 56px;
-  display: flex; align-items: center; gap: 12px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--rim);
-  flex-shrink: 0;
-  background: rgba(10,15,26,0.9);
-  backdrop-filter: blur(20px);
-}
-.sub-back {
-  width: 36px; height: 36px;
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 18px;
-  -webkit-tap-highlight-color: transparent;
-}
-.sub-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 17px; font-weight: 700; color: var(--txt);
-}
-.sub-content {
-  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  padding-bottom: var(--safe-bot);
-}
-
-/* ══════════════════════════════════════════════
-   TIMELINE
-══════════════════════════════════════════════ */
-.tl-search-bar {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--rim);
-  display: flex; gap: 8px;
-}
-.tl-search-bar input, .tl-search-bar select {
-  flex: 1; background: var(--surface); border: 1px solid var(--rim);
-  border-radius: 10px; padding: 9px 12px; color: var(--txt);
-  font-family: 'Noto Sans Thai', sans-serif; font-size: 13px; outline: none;
-  -webkit-appearance: none;
-}
-.tl-search-bar select { flex: none; width: 120px; font-size: 12px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238899b4' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
-
-.tl-body { padding: 16px; }
-
-.tl-year-label {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 11px; font-weight: 700; color: var(--txt3);
-  letter-spacing: 2px; text-transform: uppercase;
-  padding: 8px 0 6px; margin-left: 24px;
-}
-
-.tl-item {
-  display: flex; gap: 12px;
-  padding-bottom: 16px;
-  position: relative;
-}
-
-.tl-spine {
-  display: flex; flex-direction: column; align-items: center;
-  flex-shrink: 0; width: 24px; padding-top: 2px;
-}
-.tl-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: var(--surface2); border: 2px solid var(--rim2);
-  transition: all 0.2s; flex-shrink: 0;
-}
-.tl-item:hover .tl-dot { background: var(--jade); border-color: var(--jade); }
-.tl-line {
-  flex: 1; width: 1px;
-  background: var(--rim); margin-top: 2px;
-}
-
-.tl-card {
-  flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--rim);
-  border-radius: var(--r-sm);
-  padding: 12px 14px;
-  transition: border-color 0.2s;
-}
-.tl-item:hover .tl-card { border-color: var(--rim2); }
-
-.tl-card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
-.tl-card-place { font-size: 14px; font-weight: 600; color: var(--txt); flex: 1; }
-.tl-card-date { font-size: 11px; color: var(--txt3); white-space: nowrap; }
-.tl-card-prov { font-size: 12px; color: var(--jade); margin-bottom: 4px; }
-.tl-card-note { font-size: 12px; color: var(--txt2); line-height: 1.5; }
-.tl-card-footer { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.tl-tag { font-size: 11px; padding: 3px 8px; background: var(--surface2); border: 1px solid var(--rim); border-radius: 6px; color: var(--txt3); }
-
-/* ══════════════════════════════════════════════
-   ANALYTICS
-══════════════════════════════════════════════ */
-.an-body { padding: 16px; }
-
-.an-metric-row {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-  margin-bottom: 16px;
-}
-.an-metric {
-  background: var(--surface); border: 1px solid var(--rim);
-  border-radius: var(--r-md); padding: 16px;
-}
-.anm-label { font-size: 11px; font-weight: 600; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.8px; }
-.anm-val { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: var(--txt); margin: 6px 0 2px; line-height: 1; }
-.anm-sub { font-size: 12px; color: var(--txt2); }
-
-.an-chart-card {
-  background: var(--surface); border: 1px solid var(--rim);
-  border-radius: var(--r-md); padding: 16px; margin-bottom: 12px;
-}
-.an-chart-title { font-size: 12px; font-weight: 700; color: var(--txt2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
-.an-chart-wrap { height: 180px; position: relative; }
-
-/* Heatmap */
-.hm-wrap { overflow-x: auto; padding-bottom: 4px; }
-.hm-grid { display: grid; grid-auto-flow: column; gap: 2px; }
-.hm-col { display: flex; flex-direction: column; gap: 2px; }
-.hm-cell { width: 10px; height: 10px; border-radius: 2px; background: var(--surface2); }
-.hm-cell.l1 { background: rgba(0,229,160,0.2); }
-.hm-cell.l2 { background: rgba(0,229,160,0.45); }
-.hm-cell.l3 { background: rgba(0,229,160,0.7); }
-.hm-cell.l4 { background: var(--jade); }
-
-/* ══════════════════════════════════════════════
-   GAMIFICATION
-══════════════════════════════════════════════ */
-.gm-body { padding: 16px; }
-
-.gm-xp-card {
-  background: linear-gradient(135deg, rgba(0,229,160,0.1), rgba(56,189,248,0.05));
-  border: 1px solid rgba(0,229,160,0.2);
-  border-radius: var(--r-lg);
-  padding: 20px; margin-bottom: 16px;
-  display: flex; gap: 16px; align-items: center;
-}
-
-.gm-lv {
-  width: 64px; height: 64px;
-  background: linear-gradient(135deg, var(--jade2), var(--sky));
-  border-radius: 18px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.gm-lv .glv-t { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.7); letter-spacing: 1px; }
-.gm-lv .glv-n { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 800; color: #fff; line-height: 1; }
-
-.gm-info { flex: 1; min-width: 0; }
-.gm-name { font-size: 17px; font-weight: 700; color: var(--txt); }
-.gm-title { font-size: 12px; color: var(--amber); margin: 3px 0 10px; }
-.gm-bar-bg { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
-.gm-bar { height: 6px; background: linear-gradient(90deg, var(--jade), var(--sky)); border-radius: 3px; transition: width 0.8s var(--ease2); }
-.gm-xp-text { font-size: 11px; color: var(--txt3); margin-top: 5px; }
-
-.missions-title { font-size: 12px; font-weight: 700; color: var(--txt2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-
-.mission-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-.m-card {
-  background: var(--surface); border: 1px solid var(--rim);
-  border-radius: var(--r-md); padding: 14px;
-  position: relative; overflow: hidden;
-  transition: all 0.2s;
-}
-.m-card.done { border-color: rgba(0,229,160,0.3); background: linear-gradient(135deg, rgba(0,229,160,0.05), var(--surface)); }
-.m-done-check { position: absolute; top: 10px; right: 10px; width: 20px; height: 20px; background: var(--jade); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--ink); font-weight: 700; }
-
-.m-rarity { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; display: inline-block; margin-bottom: 8px; letter-spacing: 0.5px; }
-.mr-common { background: rgba(136,153,180,0.2); color: var(--txt2); }
-.mr-rare { background: rgba(56,189,248,0.15); color: var(--sky); }
-.mr-epic { background: rgba(167,139,250,0.15); color: var(--lavender); }
-.mr-legendary { background: rgba(255,184,48,0.15); color: var(--amber); }
-
-.m-icon { font-size: 24px; margin-bottom: 6px; }
-.m-name { font-size: 13px; font-weight: 600; color: var(--txt); margin-bottom: 4px; }
-.m-desc { font-size: 11px; color: var(--txt2); line-height: 1.5; margin-bottom: 8px; }
-.m-bar-bg { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
-.m-bar { height: 3px; background: var(--jade); border-radius: 2px; }
-.m-prog { font-size: 11px; color: var(--txt3); margin-top: 4px; }
-
-/* ══════════════════════════════════════════════
-   PHOTO BOOK
-══════════════════════════════════════════════ */
-.pb-body { padding: 12px; }
-.pb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
-.pb-item {
-  aspect-ratio: 1;
-  background: var(--surface2);
-  border-radius: 4px;
-  overflow: hidden;
-  cursor: pointer;
-  position: relative;
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 4px;
-  transition: transform 0.2s;
-}
-.pb-item:active { transform: scale(0.95); }
-.pb-icon { font-size: 24px; }
-.pb-name { font-size: 9px; color: rgba(255,255,255,0.5); text-align: center; padding: 0 4px; line-height: 1.3; }
-.pb-overlay { position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 50%); }
-.pb-caption { position: absolute; bottom: 0; left: 0; right: 0; padding: 4px 6px; font-size: 10px; color: rgba(255,255,255,0.8); font-weight: 500; z-index: 1; }
-
-/* ══════════════════════════════════════════════
-   MODALS & SHEETS
-══════════════════════════════════════════════ */
-.sheet-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 500; display: none;
-  align-items: flex-end;
-  backdrop-filter: blur(4px);
-}
-.sheet-overlay.open { display: flex; }
-
-.sheet {
-  width: 100%; max-height: 92vh;
-  background: var(--ink2);
-  border-radius: 24px 24px 0 0;
-  border-top: 1px solid var(--rim);
-  overflow-y: auto;
-  padding-bottom: max(24px, var(--safe-bot));
-  animation: slideUp 0.35s var(--ease);
-}
-@keyframes slideUp { from { transform: translateY(100%); } }
-
-.sheet-handle {
-  width: 36px; height: 4px;
-  background: var(--rim2); border-radius: 2px;
-  margin: 12px auto 0;
-}
-.sheet-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 18px; font-weight: 700; color: var(--txt);
-  padding: 16px 20px 4px;
-}
-
-.sheet-form { padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
-
-.btn-sheet {
-  width: 100%; padding: 15px;
-  background: linear-gradient(135deg, var(--jade), var(--jade2));
-  border: none; border-radius: var(--r-md);
-  color: var(--ink); font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 15px; font-weight: 700;
-  cursor: pointer; margin-top: 4px;
-  transition: all 0.2s;
-}
-.btn-sheet:active { transform: scale(0.97); }
-.btn-sheet.secondary {
-  background: var(--surface);
-  color: var(--txt); border: 1.5px solid var(--rim2);
-}
-
-/* Settings Sheet */
-.settings-list { padding: 8px 0; }
-.settings-item {
-  display: flex; align-items: center; gap: 14px;
-  padding: 14px 20px;
-  cursor: pointer; transition: background 0.15s;
-  border-bottom: 1px solid var(--rim);
-}
-.settings-item:last-child { border: none; }
-.settings-item:active { background: var(--surface); }
-.si-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-.si-text { flex: 1; }
-.si-label { font-size: 14px; font-weight: 500; color: var(--txt); }
-.si-sub { font-size: 12px; color: var(--txt2); margin-top: 1px; }
-.si-arrow { color: var(--txt3); font-size: 16px; }
-
-/* ══════════════════════════════════════════════
-   TOAST & NOTIFICATIONS
-══════════════════════════════════════════════ */
-#toast {
-  position: fixed; bottom: calc(var(--nav-h) + var(--safe-bot) + 12px); left: 16px; right: 16px;
-  z-index: 1000;
-  background: var(--surface2);
-  border: 1px solid var(--rim2);
-  border-radius: var(--r-md);
-  padding: 14px 16px;
-  display: flex; align-items: center; gap: 10px;
-  font-size: 14px;
-  transform: translateY(20px); opacity: 0;
-  transition: all 0.3s var(--ease);
-  pointer-events: none;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-}
-#toast.show { transform: translateY(0); opacity: 1; }
-#toast.success { border-left: 3px solid var(--jade); }
-#toast.error { border-left: 3px solid var(--rose); }
-#toast.info { border-left: 3px solid var(--sky); }
-
-/* ══════════════════════════════════════════════
-   EMPTY STATES
-══════════════════════════════════════════════ */
-.empty {
-  text-align: center; padding: 48px 24px;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-}
-.empty-ico { font-size: 48px; opacity: 0.5; }
-.empty-title { font-size: 16px; font-weight: 600; color: var(--txt2); }
-.empty-sub { font-size: 13px; color: var(--txt3); line-height: 1.6; }
-
-/* ══════════════════════════════════════════════
-   SCROLLBAR
-══════════════════════════════════════════════ */
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 2px; }
-
-/* ══════════════════════════════════════════════
-   LOADING OVERLAY
-══════════════════════════════════════════════ */
-#loading {
-  position: fixed; inset: 0; z-index: 9999;
-  background: var(--ink);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 16px;
-  transition: opacity 0.5s;
-}
-#loading.hide { opacity: 0; pointer-events: none; }
-
-.loading-logo {
-  width: 72px; height: 72px;
-  background: linear-gradient(135deg, var(--jade), var(--sky));
-  border-radius: 22px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 36px;
-  animation: pulse-logo 2s ease-in-out infinite;
-}
-@keyframes pulse-logo { 0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,0.4)} 50%{box-shadow:0 0 0 20px rgba(0,229,160,0)} }
-
-.loading-text {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 20px; font-weight: 700; color: var(--txt);
-}
-.loading-sub { font-size: 13px; color: var(--txt2); }
-
-/* ══════════════════════════════════════════════
-   DESKTOP ADJUSTMENTS
-══════════════════════════════════════════════ */
-@media (min-width: 768px) {
-  .stats-grid { grid-template-columns: repeat(4, 1fr); }
-  .mission-grid { grid-template-columns: repeat(3, 1fr); }
-  .pb-grid { grid-template-columns: repeat(5, 1fr); }
-  .an-metric-row { grid-template-columns: repeat(4, 1fr); }
-  .field-row { grid-template-columns: 1fr 1fr 1fr; }
-  #app { max-width: 480px; margin: 0 auto; border-left: 1px solid var(--rim); border-right: 1px solid var(--rim); }
-}
-
-/* ══════════════════════════════════════════════
-   PWA STANDALONE ADJUSTMENTS
-══════════════════════════════════════════════ */
-@media (display-mode: standalone) {
-  #topbar { padding-top: calc(var(--safe-top) + 4px); height: calc(var(--topbar-h) + var(--safe-top)); }
-}
+:root{
+  --bg:#0b1120;--bg2:#111827;--bg3:#1a2235;
+  --card:#1e2d42;--card2:#243354;
+  --rim:rgba(255,255,255,0.07);--rim2:rgba(255,255,255,0.13);
+  --g:#00dea0;--g2:#00c48a;--g3:rgba(0,222,160,0.12);
+  --amber:#ffb830;--rose:#ff5a78;--sky:#38c4f5;--lav:#a78bfa;
+  --t:#eef2ff;--t2:#8898b2;--t3:#4d607a;
+  --nav:60px;--bar:54px;
+  --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);
+  --r:14px;--r2:20px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--t);font-family:'Noto Sans Thai',sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:'Noto Sans Thai',sans-serif;outline:none;-webkit-appearance:none;appearance:none}
+button{cursor:pointer;border:none;background:none}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--card2);border-radius:3px}
+
+/* ── SHELL ── */
+#shell{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:var(--st);max-width:600px;margin:0 auto}
+#topbar{height:var(--bar);background:rgba(11,17,32,.93);backdrop-filter:blur(20px);border-bottom:1px solid var(--rim);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;z-index:50}
+.logo{display:flex;align-items:center;gap:6px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:16px;color:var(--t);flex-shrink:0;text-decoration:none}
+.logo-i{width:28px;height:28px;background:linear-gradient(135deg,var(--g),var(--sky));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sw{flex:1;background:var(--bg3);border:1.5px solid var(--rim);border-radius:11px;display:flex;align-items:center;padding:0 10px;gap:6px;transition:border-color .2s}
+.sw:focus-within{border-color:var(--g2)}
+.sw input{flex:1;background:none;border:none;color:var(--t);font-size:13px;padding:7px 0}
+.sw input::placeholder{color:var(--t3)}
+.tbb{width:34px;height:34px;background:var(--bg3);border:1.5px solid var(--rim);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:all .2s;cursor:pointer;color:var(--t)}
+.tbb:active{transform:scale(.88)}
+.av{width:32px;height:32px;background:var(--g3);border:1.5px solid var(--g2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--g);cursor:pointer;flex-shrink:0;font-family:'Space Grotesk',sans-serif;transition:transform .2s}
+.av:active{transform:scale(.88)}
+#content{flex:1;position:relative;overflow:hidden}
+#bnav{height:calc(var(--nav) + var(--sb));padding-bottom:var(--sb);background:rgba(11,17,32,.94);backdrop-filter:blur(20px);border-top:1px solid var(--rim);display:flex;align-items:flex-start;flex-shrink:0;z-index:50}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding-top:8px;color:var(--t3);transition:color .2s;position:relative}
+.nb.on{color:var(--g)}
+.nb .ni{font-size:21px;transition:transform .25s cubic-bezier(.34,1.56,.64,1);line-height:1}
+.nb.on .ni{transform:translateY(-2px)}
+.nb .nl{font-size:10px;font-weight:500;margin-top:1px}
+.nb.on::after{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:2px;background:var(--g);border-radius:0 0 2px 2px}
+.nb.fab{flex:none;width:64px}
+.nb.fab .ni{width:48px;height:48px;background:linear-gradient(135deg,var(--g),var(--g2));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 18px rgba(0,222,160,.4);transition:all .25s cubic-bezier(.34,1.56,.64,1)}
+.nb.fab:active .ni{transform:scale(.88)!important}
+.nb.fab .nl{color:var(--g)}
+
+/* ── PANELS ── */
+.panel{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .22s,transform .22s ease-out;display:flex;flex-direction:column}
+.panel.on{opacity:1;pointer-events:all;transform:none}
+
+/* ── COMMON ── */
+.ph{padding:16px 16px 0}
+.pt{font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--t);margin-bottom:2px}
+.ps{font-size:12px;color:var(--t2)}
+.card{background:var(--card);border:1px solid var(--rim);border-radius:var(--r)}
+.sec{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:1px;padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+.sec a{font-size:12px;color:var(--g);text-transform:none;letter-spacing:0;font-weight:500;cursor:pointer}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:18px;font-size:11px;font-weight:500;border:1px solid}
+.cg{background:var(--g3);color:var(--g);border-color:rgba(0,222,160,.25)}
+.cb{background:rgba(56,196,245,.1);color:var(--sky);border-color:rgba(56,196,245,.2)}
+.cv{background:rgba(167,139,250,.1);color:var(--lav);border-color:rgba(167,139,250,.2)}
+.ca{background:rgba(255,184,48,.1);color:var(--amber);border-color:rgba(255,184,48,.2)}
+.cr{background:rgba(255,90,120,.1);color:var(--rose);border-color:rgba(255,90,120,.2)}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 20px;color:var(--t3);text-align:center}
+.ei{font-size:40px;opacity:.5}
+.et{font-size:14px;font-weight:600;color:var(--t2)}
+.es{font-size:12px;line-height:1.6}
+.btn-g{background:linear-gradient(135deg,var(--g),var(--g2));border:none;border-radius:var(--r);color:#0b1120;font-weight:700;font-size:15px;padding:14px;width:100%;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 4px 16px rgba(0,222,160,.3);transition:all .2s;cursor:pointer}
+.btn-g:active{transform:scale(.97);box-shadow:none}
+.btn-s{background:var(--bg3);border:1.5px solid var(--rim2);border-radius:var(--r);color:var(--t);font-size:13px;padding:12px;width:100%;cursor:pointer;transition:all .2s}
+.btn-s:active{transform:scale(.97)}
+
+/* ── FORM ── */
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;padding-left:1px}
+.fld input,.fld select,.fld textarea{background:var(--bg3);border:1.5px solid var(--rim);border-radius:10px;padding:11px 12px;color:var(--t);font-size:14px;width:100%;transition:border-color .2s,box-shadow .2s}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--g2);box-shadow:0 0 0 3px rgba(0,222,160,.08)}
+.fld input::placeholder,.fld textarea::placeholder{color:var(--t3)}
+.fld textarea{min-height:76px;resize:none;line-height:1.6}
+.fld select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath fill='%234d607a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;color:var(--t)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+/* Type grid */
+.tg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tb{background:var(--bg3);border:1.5px solid var(--rim);border-radius:9px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:all .2s;font-size:10px;font-weight:500;color:var(--t2)}
+.tb span{font-size:19px;line-height:1}
+.tb.on{background:var(--g3);border-color:rgba(0,222,160,.35);color:var(--g)}
+/* Stars */
+.srow{display:flex;gap:5px}
+.star{font-size:26px;cursor:pointer;filter:grayscale(1) opacity(.3);transition:filter .15s,transform .15s}
+.star.on{filter:none;transform:scale(1.08)}
+/* Weather */
+.wrow{display:flex;gap:6px;flex-wrap:wrap}
+.wb{padding:7px 11px;background:var(--bg3);border:1.5px solid var(--rim);border-radius:18px;font-size:13px;cursor:pointer;transition:all .2s}
+.wb.on{background:rgba(56,196,245,.1);border-color:var(--sky)}
+/* Amount */
+.amw{position:relative}
+.amw input{padding-right:38px}
+.amu{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--t2);pointer-events:none}
+/* AC dropdown */
+.ac{background:var(--card2);border:1.5px solid var(--rim2);border-radius:10px;overflow:hidden;display:none;margin-top:3px;max-height:210px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,.45);position:relative;z-index:20}
+.ac.open{display:block}
+.aci{padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--rim);display:flex;align-items:center;gap:9px;transition:background .15s}
+.aci:last-child{border:none}
+.aci:active,.aci:hover{background:var(--bg3)}
+.aci-e{font-size:17px;flex-shrink:0}
+.aci-m{font-size:13px;font-weight:500;color:var(--t)}
+.aci-s{font-size:11px;color:var(--t2);margin-top:1px}
+
+/* ── HOME ── */
+#p-home{padding-bottom:20px}
+.hero{padding:16px 16px 14px;background:linear-gradient(160deg,var(--bg3) 0%,var(--bg2) 100%)}
+.greet{font-size:12px;color:var(--t2);margin-bottom:1px}
+.hname{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--t);margin-bottom:12px}
+.hname em{color:var(--g);font-style:normal}
+.xpc{background:var(--card);border:1px solid var(--rim);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:11px}
+.lvb{width:44px;height:44px;background:linear-gradient(135deg,rgba(0,222,160,.22),rgba(56,196,245,.18));border:2px solid var(--g2);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.lvt{font-size:7px;font-weight:700;color:var(--g);letter-spacing:1px}
+.lvn{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:800;color:var(--g);line-height:1}
+.xpi{flex:1;min-width:0}
+.xptitle{font-size:11px;color:var(--amber);font-weight:600;margin-bottom:5px}
+.xpbar{height:4px;background:var(--bg);border-radius:2px;overflow:hidden}
+.xpfill{height:4px;background:linear-gradient(90deg,var(--g2),var(--sky));border-radius:2px;transition:width .8s ease}
+.xpnum{font-size:10px;color:var(--t3);margin-top:3px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 16px}
+.sc{background:var(--card);border:1px solid var(--rim);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:transform .2s,border-color .2s}
+.sc:active{transform:scale(.95)}
+.sci{font-size:18px;margin-bottom:5px}
+.scv{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--t);line-height:1;margin-bottom:2px}
+.scl{font-size:11px;color:var(--t2)}
+.scs{font-size:10px;color:var(--t3);margin-top:1px}
+.ri{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-bottom:1px solid var(--rim);cursor:pointer;transition:background .15s}
+.ri:last-child{border:none}
+.ri:active{background:var(--bg3)}
+.rii{width:38px;height:38px;background:var(--bg3);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.rin{font-size:13px;font-weight:600;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.rim2c{font-size:11px;color:var(--t2);display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap}
+.rip{color:var(--g);font-weight:500}
+.rrw{}
+.rr{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--rim)}
+.rr:last-child{border:none}
+.rri{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.rrd{flex:1}
+.rrn{font-size:12px;font-weight:500;color:var(--t);margin-bottom:3px}
+.rrbg{height:3px;background:var(--bg);border-radius:2px;overflow:hidden}
+.rrfill{height:3px;background:linear-gradient(90deg,var(--g2),var(--sky));border-radius:2px;transition:width .8s}
+.rrc{font-size:11px;color:var(--t2);font-family:'Space Grotesk',sans-serif;font-weight:600;white-space:nowrap}
+
+/* ── MAP ── */
+#p-map{overflow:hidden;display:block}
+#map{position:absolute;inset:0}
+.leaflet-container{background:#0d1524!important}
+.mapbot{position:absolute;bottom:0;left:0;right:0;z-index:10;background:linear-gradient(0deg,rgba(11,17,32,.97) 0%,rgba(11,17,32,.55) 75%,transparent 100%);padding:28px 12px 12px}
+.mpills{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.mpills::-webkit-scrollbar{display:none}
+.mp{flex-shrink:0;background:rgba(30,45,66,.88);border:1px solid var(--rim2);border-radius:10px;padding:7px 11px;display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap;backdrop-filter:blur(8px)}
+.mp strong{color:var(--g);font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px}
+.mfabs{position:absolute;top:10px;right:10px;z-index:10;display:flex;flex-direction:column;gap:7px}
+.mfab{width:38px;height:38px;background:rgba(30,45,66,.88);border:1px solid var(--rim2);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;backdrop-filter:blur(8px);transition:all .2s}
+.mfab:active{transform:scale(.88)}
+
+/* ── CHECKIN ── */
+#p-checkin{padding-bottom:30px}
+.cihero{padding:16px 16px 14px;background:linear-gradient(160deg,var(--bg3),var(--bg2));border-bottom:1px solid var(--rim)}
+.ciform{padding:12px 16px;display:flex;flex-direction:column;gap:11px}
+
+/* photo preview chips */
+.ph-preview{display:flex;flex-wrap:wrap;gap:7px;min-height:0}
+.ph-thumb{position:relative;width:66px;height:66px;border-radius:9px;overflow:hidden;flex-shrink:0;background:var(--bg3)}
+.ph-thumb img{width:100%;height:100%;object-fit:cover}
+.ph-del{position:absolute;top:3px;right:3px;width:17px;height:17px;background:rgba(0,0,0,.65);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;color:#fff;font-weight:700}
+
+/* ── TRIPS ── */
+#p-trips{padding-bottom:20px}
+.trip-hdr{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--rim)}
+.btn-new{background:var(--g3);border:1.5px solid rgba(0,222,160,.3);border-radius:9px;padding:7px 13px;color:var(--g);font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;cursor:pointer;transition:all .2s}
+.btn-new:active{transform:scale(.94)}
+.trpcard{background:var(--card);border:1px solid var(--rim);border-radius:var(--r);margin:0 16px 11px;overflow:hidden;transition:all .2s}
+.tct{padding:12px 13px 10px;display:flex;gap:11px;align-items:flex-start}
+.tci{width:42px;height:42px;background:linear-gradient(135deg,rgba(0,222,160,.14),rgba(56,196,245,.1));border:1px solid rgba(0,222,160,.2);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.tcn{font-size:14px;font-weight:700;color:var(--t);margin-bottom:1px}
+.tcd{font-size:11px;color:var(--t2)}
+.tcdel{margin-left:auto;width:30px;height:30px;background:rgba(255,90,120,.1);border:1px solid rgba(255,90,120,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;transition:all .2s}
+.tcdel:active{transform:scale(.88)}
+.tcchips{padding:0 13px 10px;display:flex;gap:5px;flex-wrap:wrap}
+.tcpl{border-top:1px solid var(--rim);padding:9px 13px}
+.tcplt{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.tcpll{display:flex;flex-wrap:wrap;gap:4px}
+.tcpltag{font-size:11px;padding:2px 7px;background:var(--bg3);border:1px solid var(--rim);border-radius:5px;color:var(--t2)}
+/* Trip photos section */
+.tcphs{border-top:1px solid var(--rim);padding:9px 13px}
+.tcphsh{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between}
+.tcphadd{color:var(--g);font-size:11px;cursor:pointer;font-weight:600;padding:2px 0}
+.tcphg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.tcphg::-webkit-scrollbar{display:none}
+.tcpht{width:76px;height:76px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg3);cursor:pointer;position:relative}
+.tcpht img{width:100%;height:100%;object-fit:cover}
+.tcphmore{background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;font-family:'Space Grotesk',sans-serif}
+.tcphnone{font-size:11px;color:var(--t3);padding:4px 0}
+
+/* ── MORE ── */
+#p-more{padding-bottom:20px}
+.moregrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px 16px}
+.moretile{background:var(--card);border:1px solid var(--rim);border-radius:var(--r);padding:16px 13px;cursor:pointer;transition:all .2s}
+.moretile:active{transform:scale(.94);background:var(--card2)}
+.mthi{border-color:rgba(0,222,160,.22);background:linear-gradient(135deg,rgba(0,222,160,.05),var(--card))}
+.mtico{font-size:24px;margin-bottom:8px}
+.mtnm{font-size:13px;font-weight:600;color:var(--t);margin-bottom:2px}
+.mtds{font-size:11px;color:var(--t2);line-height:1.5}
+
+/* ── SIDE PANELS ── */
+.side{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;background:var(--bg);padding-top:var(--st);transform:translateX(100%);transition:transform .3s cubic-bezier(.25,.46,.45,.94)}
+.side.open{transform:none}
+.sideh{height:50px;display:flex;align-items:center;gap:10px;padding:0 13px;border-bottom:1px solid var(--rim);flex-shrink:0;background:rgba(11,17,32,.9);backdrop-filter:blur(20px)}
+.backbtn{width:32px;height:32px;background:var(--bg3);border:1px solid var(--rim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;flex-shrink:0;transition:all .2s;color:var(--t)}
+.backbtn:active{transform:scale(.88)}
+.sidetitle{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;color:var(--t)}
+.sidebody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:var(--sb)}
+
+/* ── TIMELINE ── */
+.tlf{padding:9px 13px;border-bottom:1px solid var(--rim);display:flex;gap:7px;flex-shrink:0}
+.tlf input,.tlf select{flex:1;background:var(--bg3);border:1px solid var(--rim);border-radius:9px;padding:8px 11px;color:var(--t);font-size:12px}
+.tlf input::placeholder{color:var(--t3)}
+.tlf select{flex:none;width:110px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath fill='%234d607a' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px;-webkit-appearance:none}
+.tlb{padding:13px}
+.tlyr{font-size:10px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase;padding:5px 0 4px 22px}
+.tli{display:flex;gap:9px;padding-bottom:12px}
+.tls{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:18px;padding-top:3px}
+.tld{width:8px;height:8px;border-radius:50%;background:var(--card2);border:2px solid var(--rim2);transition:all .2s;flex-shrink:0}
+.tli:hover .tld{background:var(--g);border-color:var(--g)}
+.tll{width:1px;flex:1;background:var(--rim);margin-top:3px}
+.tlcard{flex:1;background:var(--card);border:1px solid var(--rim);border-radius:10px;padding:10px 12px;transition:border-color .2s}
+.tli:hover .tlcard{border-color:var(--rim2)}
+.tlr1{display:flex;align-items:flex-start;gap:6px;margin-bottom:3px}
+.tlplace{font-size:13px;font-weight:600;color:var(--t);flex:1}
+.tldate{font-size:10px;color:var(--t3);white-space:nowrap}
+.tldelbtn{width:24px;height:24px;background:rgba(255,90,120,.1);border:1px solid rgba(255,90,120,.15);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;flex-shrink:0;color:var(--rose);transition:all .2s}
+.tldelbtn:active{transform:scale(.88)}
+.tlprov{font-size:11px;color:var(--g);margin-bottom:3px;font-weight:500}
+.tlnote{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:5px}
+.tltags{display:flex;gap:4px;flex-wrap:wrap}
+.tltag{font-size:10px;padding:2px 6px;background:var(--bg3);border:1px solid var(--rim);border-radius:5px;color:var(--t3)}
+.tlphotos{display:flex;gap:5px;margin-top:7px;overflow-x:auto;scrollbar-width:none}
+.tlphotos::-webkit-scrollbar{display:none}
+.tlph{width:52px;height:52px;border-radius:6px;overflow:hidden;flex-shrink:0;cursor:pointer}
+.tlph img{width:100%;height:100%;object-fit:cover}
+
+/* ── ANALYTICS ── */
+.anb{padding:13px;display:flex;flex-direction:column;gap:11px}
+.ang{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.anm{background:var(--card);border:1px solid var(--rim);border-radius:var(--r);padding:13px}
+.anml{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.7px}
+.anmv{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;color:var(--t);margin:4px 0 2px;line-height:1}
+.anms{font-size:11px;color:var(--t2)}
+.anch{background:var(--card);border:1px solid var(--rim);border-radius:var(--r);padding:13px}
+.anct{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:11px}
+.ancw{height:165px;position:relative}
+.hmscroll{overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.hmscroll::-webkit-scrollbar{display:none}
+.hmg{display:grid;grid-auto-flow:column;gap:2px}
+.hmc{display:flex;flex-direction:column;gap:2px}
+.hmcell{width:9px;height:9px;border-radius:2px;background:var(--bg3)}
+.hmcell.l1{background:rgba(0,222,160,.2)}
+.hmcell.l2{background:rgba(0,222,160,.45)}
+.hmcell.l3{background:rgba(0,222,160,.72)}
+.hmcell.l4{background:var(--g)}
+
+/* ── GAMIFICATION ── */
+.gmb{padding:13px;display:flex;flex-direction:column;gap:11px}
+.gmhero{background:linear-gradient(135deg,rgba(0,222,160,.1),rgba(56,196,245,.05));border:1px solid rgba(0,222,160,.2);border-radius:var(--r2);padding:16px;display:flex;gap:13px;align-items:center}
+.gmlv{width:58px;height:58px;background:linear-gradient(135deg,var(--g2),var(--sky));border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.glt{font-size:8px;font-weight:700;color:rgba(11,17,32,.65);letter-spacing:1px}
+.gln{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:#0b1120;line-height:1}
+.gmi{flex:1;min-width:0}
+.gmn{font-size:15px;font-weight:700;color:var(--t)}
+.gmt{font-size:11px;color:var(--amber);margin:2px 0 8px;font-weight:600}
+.gmbar{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}
+.gmfill{height:5px;background:linear-gradient(90deg,var(--g),var(--sky));border-radius:3px;transition:width .8s ease}
+.gmxp{font-size:10px;color:var(--t3);margin-top:4px}
+.mstitle{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:1px}
+.msg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.msc{background:var(--card);border:1px solid var(--rim);border-radius:var(--r);padding:12px;position:relative;overflow:hidden;transition:all .2s}
+.msc.done{border-color:rgba(0,222,160,.3);background:linear-gradient(135deg,rgba(0,222,160,.05),var(--card))}
+.mscheck{position:absolute;top:8px;right:8px;width:17px;height:17px;background:var(--g);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;color:#0b1120;font-weight:700}
+.msrar{font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;margin-bottom:6px;letter-spacing:.4px}
+.rc{background:rgba(77,96,122,.2);color:var(--t3)}
+.rr{background:rgba(56,196,245,.15);color:var(--sky)}
+.re{background:rgba(167,139,250,.15);color:var(--lav)}
+.rl{background:rgba(255,184,48,.15);color:var(--amber)}
+.msico{font-size:21px;margin-bottom:5px}
+.msnm{font-size:12px;font-weight:700;color:var(--t);margin-bottom:2px}
+.msds{font-size:10px;color:var(--t2);line-height:1.4;margin-bottom:6px}
+.msbar{height:3px;background:var(--bg);border-radius:2px;overflow:hidden}
+.msfill{height:3px;background:var(--g);border-radius:2px}
+.mspr{font-size:10px;color:var(--t3);margin-top:3px}
+
+/* ── PHOTOS ── */
+.pbb{padding:10px}
+.pbg{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.pbitem{aspect-ratio:1;border-radius:4px;overflow:hidden;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;transition:opacity .2s;background:var(--bg3)}
+.pbitem:active{opacity:.7}
+.pbico{font-size:20px}
+.pbnm{font-size:9px;color:rgba(255,255,255,.45);text-align:center;padding:0 3px;line-height:1.3}
+.pbov{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.65) 0%,transparent 50%)}
+.pbcap{position:absolute;bottom:0;left:0;right:0;padding:3px 5px;font-size:9px;color:#fff;font-weight:500;z-index:1}
+
+/* ── SHEETS ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;display:none;align-items:flex-end;backdrop-filter:blur(5px)}
+.overlay.open{display:flex}
+.sheet{width:100%;max-height:92vh;background:var(--bg2);border-radius:20px 20px 0 0;border-top:1px solid var(--rim);overflow-y:auto;padding-bottom:max(20px,var(--sb));animation:sup .3s cubic-bezier(.34,1.1,.64,1)}
+@keyframes sup{from{transform:translateY(100%)}}
+.shhndl{width:32px;height:4px;background:var(--rim2);border-radius:2px;margin:10px auto 0}
+.shtitle{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;color:var(--t);padding:13px 17px 5px}
+.shform{padding:7px 17px 13px;display:flex;flex-direction:column;gap:10px}
+.shbtn{width:100%;padding:13px;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s}
+.shbtn:active{transform:scale(.97)}
+.shg{background:linear-gradient(135deg,var(--g),var(--g2));color:#0b1120;border:none;box-shadow:0 4px 14px rgba(0,222,160,.28)}
+.shs{background:var(--bg3);color:var(--t);border:1.5px solid var(--rim2)}
+/* Settings list */
+.stl{}
+.sti{display:flex;align-items:center;gap:11px;padding:13px 17px;border-bottom:1px solid var(--rim);cursor:pointer;transition:background .15s}
+.sti:last-child{border:none}
+.sti:active{background:var(--bg3)}
+.stii{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.stib{flex:1}
+.stil{font-size:13px;font-weight:500;color:var(--t)}
+.stis{font-size:11px;color:var(--t2);margin-top:1px}
+.stiArr{color:var(--t3);font-size:15px}
+.infobox{background:var(--bg3);border:1px solid var(--rim);border-radius:10px;padding:11px;font-size:12px;color:var(--t2);line-height:1.8}
+.infobox strong{color:var(--t)}
+
+/* ── PHOTO VIEWER ── */
+#pv{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.93);display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#pv.open{display:flex}
+#pvimg{max-width:100%;max-height:80vh;border-radius:10px;object-fit:contain}
+#pvclose{position:absolute;top:calc(16px + var(--st));right:14px;width:36px;height:36px;background:rgba(255,255,255,.14);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;color:#fff}
+#pvcap{margin-top:12px;font-size:13px;color:rgba(255,255,255,.65);text-align:center}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(var(--nav) + var(--sb) + 10px);left:13px;right:13px;z-index:500;background:var(--card2);border:1px solid var(--rim2);border-radius:var(--r);padding:12px 14px;font-size:13px;display:flex;align-items:center;gap:8px;transform:translateY(14px);opacity:0;transition:all .28s cubic-bezier(.34,1.2,.64,1);pointer-events:none;box-shadow:0 8px 26px rgba(0,0,0,.4);max-width:600px;margin:0 auto;left:50%;transform:translateX(-50%) translateY(14px)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{border-left:3px solid var(--g)}
+#toast.err{border-left:3px solid var(--rose)}
+#toast.info{border-left:3px solid var(--sky)}
+
+/* ── SPLASH ── */
+#splash{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .5s}
+#splash.out{opacity:0;pointer-events:none}
+.spico{width:68px;height:68px;background:linear-gradient(135deg,var(--g),var(--sky));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:33px;animation:splpulse 2s ease-in-out infinite}
+@keyframes splpulse{0%,100%{box-shadow:0 0 0 0 rgba(0,222,160,.4)}50%{box-shadow:0 0 0 16px rgba(0,222,160,0)}}
+.spnm{font-family:'Space Grotesk',sans-serif;font-size:21px;font-weight:700;color:var(--t)}
+.spsb{font-size:12px;color:var(--t2)}
+
+/* ── SYNC BAR ── */
+#syncbar{height:0;overflow:hidden;background:var(--g3);border-bottom:1px solid rgba(0,222,160,.2);display:flex;align-items:center;padding:0 14px;gap:7px;font-size:12px;color:var(--g);transition:height .3s ease;flex-shrink:0}
+#syncbar.show{height:30px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin 1s linear infinite;display:inline-block}
+
+/* pwa tip */
+.pwatip{margin:0 16px;background:linear-gradient(135deg,rgba(56,196,245,.1),rgba(0,222,160,.05));border:1px solid rgba(56,196,245,.2);border-radius:var(--r);padding:13px}
+.pwatip h4{font-size:13px;font-weight:600;color:var(--sky);margin-bottom:4px}
+.pwatip p{font-size:11px;color:var(--t2);line-height:1.7;margin-bottom:9px}
+.pwatip button{background:rgba(56,196,245,.15);border:1px solid rgba(56,196,245,.3);border-radius:7px;padding:6px 12px;color:var(--sky);font-size:12px;cursor:pointer}
 </style>
 </head>
 <body>
 
-<!-- LOADING SPLASH -->
-<div id="loading">
-  <div class="loading-logo">🗺️</div>
-  <div class="loading-text">Checkin TH</div>
-  <div class="loading-sub" id="loading-msg">กำลังโหลด...</div>
+<div id="splash">
+  <div class="spico">🗺️</div>
+  <div class="spnm">Checkin TH</div>
+  <div class="spsb" id="splsub">กำลังโหลด...</div>
 </div>
 
-<!-- APP SHELL -->
-<div id="app">
-
-  <!-- TOPBAR -->
+<div id="shell">
   <div id="topbar">
-    <div class="tb-logo">
-      <div class="tb-logo-dot">🗺️</div>
-      Checkin TH
+    <div class="logo"><div class="logo-i">🗺️</div>Checkin TH</div>
+    <div class="sw">
+      <span style="color:var(--t3);font-size:13px">🔍</span>
+      <input type="text" id="gsearch" placeholder="ค้นหาสถานที่ จังหวัด..." oninput="onGsearch(this.value)">
     </div>
-    <div class="tb-search">
-      <span style="color:var(--txt3);font-size:14px;">🔍</span>
-      <input type="text" placeholder="ค้นหาจังหวัด สถานที่..." id="global-search" oninput="handleSearch(this.value)">
-    </div>
-    <div class="tb-sync" id="sync-btn" onclick="syncWithGAS()" title="Sync">🔄</div>
-    <div class="tb-avatar" id="user-avatar" onclick="openSheet('sheet-settings')">ME</div>
+    <div class="tbb" id="syncbtn" onclick="doSync()" title="Sync">🔄</div>
+    <div class="av" id="topav" onclick="openSheet('sh-settings')">ฉ</div>
   </div>
+  <div id="syncbar"><span id="syncspinner" class="spinning">⟳</span><span id="syncmsg">กำลัง sync...</span></div>
 
-  <!-- SYNC BAR -->
-  <div id="sync-bar">
-    <span>⟳</span>
-    <span id="sync-msg">กำลัง sync ข้อมูล...</span>
-  </div>
-
-  <!-- CONTENT -->
   <div id="content">
-
-    <!-- ═══ HOME PANEL ═══ -->
-    <div class="panel active" id="panel-home">
-      <div class="home-hero">
-        <div class="home-greeting" id="greeting">สวัสดีตอนเช้า</div>
-        <div class="home-name" id="home-name">นักเดินทาง <span>🌏</span></div>
-
-        <!-- XP -->
-        <div class="xp-strip">
-          <div class="xp-lv">
-            <div class="lv-text">LV</div>
-            <div class="lv-num" id="xp-level">1</div>
-          </div>
-          <div class="xp-info">
-            <div class="xp-title" id="xp-title-text">« มือใหม่หัดเดินทาง »</div>
-            <div class="xp-bar-bg"><div class="xp-bar" id="xp-bar" style="width:5%"></div></div>
-            <div class="xp-nums" id="xp-nums">0 / 100 XP</div>
+    <!-- HOME -->
+    <div class="panel on" id="p-home">
+      <div class="hero">
+        <div class="greet" id="greet">สวัสดี</div>
+        <div class="hname" id="hname">นักเดินทาง <em>🌏</em></div>
+        <div class="xpc">
+          <div class="lvb"><div class="lvt">LV</div><div class="lvn" id="hlv">1</div></div>
+          <div class="xpi">
+            <div class="xptitle" id="hxtitle">« มือใหม่หัดเดินทาง »</div>
+            <div class="xpbar"><div class="xpfill" id="hxbar" style="width:5%"></div></div>
+            <div class="xpnum" id="hxnum">0 / 100 XP</div>
           </div>
         </div>
       </div>
-
-      <!-- Stats -->
-      <div class="stats-grid" style="padding:16px 16px 0;">
-        <div class="stat-card" onclick="openSub('sub-timeline')">
-          <div class="sc-icon">📍</div>
-          <div class="sc-val" id="s-checkins">0</div>
-          <div class="sc-label">เช็คอินทั้งหมด</div>
-        </div>
-        <div class="stat-card" onclick="openSub('sub-analytics')">
-          <div class="sc-icon">🗺️</div>
-          <div class="sc-val" id="s-provinces">0</div>
-          <div class="sc-label">จังหวัด</div>
-          <div class="sc-sub">จาก 77</div>
-        </div>
-        <div class="stat-card" onclick="showPanel('trips')">
-          <div class="sc-icon">🚗</div>
-          <div class="sc-val" id="s-trips">0</div>
-          <div class="sc-label">ทริป</div>
-        </div>
-        <div class="stat-card" onclick="openSub('sub-analytics')">
-          <div class="sc-icon">💰</div>
-          <div class="sc-val" id="s-expense" style="font-size:20px;">0</div>
-          <div class="sc-label">บาท</div>
+      <div class="sg">
+        <div class="sc" onclick="openSide('sd-timeline')"><div class="sci">📍</div><div class="scv" id="sc-ci">0</div><div class="scl">เช็คอิน</div></div>
+        <div class="sc" onclick="openSide('sd-analytics')"><div class="sci">🗺️</div><div class="scv" id="sc-pv">0</div><div class="scl">จังหวัด</div><div class="scs">จาก 77</div></div>
+        <div class="sc" onclick="navTo('trips')"><div class="sci">🚗</div><div class="scv" id="sc-tr">0</div><div class="scl">ทริป</div></div>
+        <div class="sc" onclick="openSide('sd-analytics')"><div class="sci">💰</div><div class="scv" id="sc-ex" style="font-size:18px">0</div><div class="scl">บาท</div></div>
+      </div>
+      <div class="sec">เช็คอินล่าสุด <a onclick="openSide('sd-timeline')">ดูทั้งหมด →</a></div>
+      <div class="card" style="margin:0 16px" id="rec-list"></div>
+      <div class="sec">ความคืบหน้ารายภาค</div>
+      <div class="card" style="margin:0 16px" id="reg-list"></div>
+      <div id="pwa-tip" style="display:none;margin-top:12px">
+        <div class="pwatip">
+          <h4>📱 ติดตั้งเป็น App</h4>
+          <p>iOS: Share → Add to Home Screen<br>Android: เมนู ⋮ → Install App</p>
+          <button onclick="pwaInstall()">ติดตั้งเลย</button>
         </div>
       </div>
-
-      <!-- Recent -->
-      <div class="sec-title">เช็คอินล่าสุด <a onclick="openSub('sub-timeline')">ดูทั้งหมด →</a></div>
-      <div class="recent-list" id="recent-list">
-        <div class="empty"><div class="empty-ico">📍</div><div class="empty-title">ยังไม่มีการเช็คอิน</div><div class="empty-sub">กด + ด้านล่างเพื่อเริ่มบันทึก</div></div>
-      </div>
-
-      <!-- Region Progress -->
-      <div class="sec-title">ความคืบหน้ารายภาค</div>
-      <div class="region-list" id="region-list"></div>
-
-      <div style="height:20px;"></div>
+      <div style="height:20px"></div>
     </div>
 
-    <!-- ═══ MAP PANEL ═══ -->
-    <div class="panel" id="panel-map">
-      <div id="map"></div>
-      <div class="map-fab" onclick="showPanel('checkin')" style="top:12px;right:12px;">📍</div>
-      <div class="map-fab" onclick="map && map.setView([13,100.5],6)" style="top:64px;right:12px;">🎯</div>
-
-      <div class="map-stats-strip">
-        <div class="map-quick-stats">
-          <div class="qs-pill">🗺️ เดินทาง <span class="qs-num" id="mqs-prov">0</span> จังหวัด</div>
-          <div class="qs-pill">📍 <span class="qs-num" id="mqs-ci">0</span> เช็คอิน</div>
-          <div class="qs-pill">🚗 <span class="qs-num" id="mqs-trips">0</span> ทริป</div>
-          <div class="qs-pill">💰 <span class="qs-num" id="mqs-exp">0</span> บาท</div>
+    <!-- MAP -->
+    <div class="panel" id="p-map" style="overflow:hidden;display:block">
+      <div id="map" style="position:absolute;inset:0"></div>
+      <div class="mfabs">
+        <div class="mfab" onclick="mapReset()">🎯</div>
+        <div class="mfab" onclick="mapMyLoc()">📡</div>
+        <div class="mfab" onclick="navTo('checkin')">📍</div>
+      </div>
+      <div class="mapbot">
+        <div class="mpills">
+          <div class="mp">🗺️ <strong id="mp-pv">0</strong> จังหวัด</div>
+          <div class="mp">📍 <strong id="mp-ci">0</strong> เช็คอิน</div>
+          <div class="mp">🚗 <strong id="mp-tr">0</strong> ทริป</div>
+          <div class="mp">💰 <strong id="mp-ex">0</strong> บาท</div>
         </div>
       </div>
     </div>
 
-    <!-- ═══ CHECK-IN PANEL ═══ -->
-    <div class="panel" id="panel-checkin">
-      <div class="ci-hero">
-        <div class="ci-hero-title">📍 เช็คอินสถานที่</div>
-        <div class="ci-hero-sub">บันทึกการเดินทางของคุณ</div>
+    <!-- CHECKIN -->
+    <div class="panel" id="p-checkin">
+      <div class="cihero">
+        <div class="pt">📍 เช็คอินสถานที่</div>
+        <div class="ps">บันทึกการเดินทางของคุณ</div>
       </div>
-
-      <div class="ci-form">
-        <!-- Place search -->
-        <div class="field">
+      <div class="ciform">
+        <div class="fld">
           <label>ชื่อสถานที่ *</label>
-          <input type="text" id="ci-place" placeholder="ค้นหาหรือพิมพ์ชื่อสถานที่..." autocomplete="off" oninput="searchPlaces(this.value)">
-          <div class="ac-drop" id="ac-drop"></div>
+          <input type="text" id="ci-place" placeholder="พิมพ์ชื่อ หรือค้นหา..." autocomplete="off" oninput="onPlaceInput(this.value)">
+          <div class="ac" id="ci-ac"></div>
         </div>
-
-        <!-- Province -->
-        <div class="field">
+        <div class="fld">
           <label>จังหวัด *</label>
-          <select id="ci-province"><option value="">-- เลือกจังหวัด --</option></select>
+          <select id="ci-prov"><option value="">— เลือกจังหวัด —</option></select>
         </div>
-
-        <!-- Type -->
-        <div class="field">
-          <label>ประเภท</label>
-          <div class="type-chips" id="type-chips">
-            <div class="type-chip selected" data-val="attraction" onclick="selectType(this)">🏛️ ท่องเที่ยว</div>
-            <div class="type-chip" data-val="food" onclick="selectType(this)">🍜 อาหาร</div>
-            <div class="type-chip" data-val="hotel" onclick="selectType(this)">🏨 ที่พัก</div>
-            <div class="type-chip" data-val="cafe" onclick="selectType(this)">☕ คาเฟ่</div>
-            <div class="type-chip" data-val="temple" onclick="selectType(this)">⛩️ วัด</div>
-            <div class="type-chip" data-val="nature" onclick="selectType(this)">🌿 ธรรมชาติ</div>
-            <div class="type-chip" data-val="shopping" onclick="selectType(this)">🛍️ ช้อปปิ้ง</div>
-          </div>
+        <div class="fld">
+          <label>ประเภทสถานที่</label>
+          <div class="tg" id="type-grid"></div>
         </div>
-
-        <!-- Date & Time -->
-        <div class="field-row">
-          <div class="field">
-            <label>วันที่ *</label>
-            <input type="date" id="ci-date">
-          </div>
-          <div class="field">
-            <label>เวลา</label>
-            <input type="time" id="ci-time">
-          </div>
+        <div class="frow">
+          <div class="fld"><label>วันที่ *</label><input type="date" id="ci-date"></div>
+          <div class="fld"><label>เวลา</label><input type="time" id="ci-time"></div>
         </div>
-
-        <!-- Rating -->
-        <div class="field">
+        <div class="fld">
           <label>ให้คะแนน</label>
-          <div class="stars" id="star-container">
-            <div class="star on" data-val="1" onclick="setRating(1)">⭐</div>
-            <div class="star on" data-val="2" onclick="setRating(2)">⭐</div>
-            <div class="star on" data-val="3" onclick="setRating(3)">⭐</div>
-            <div class="star on" data-val="4" onclick="setRating(4)">⭐</div>
-            <div class="star on" data-val="5" onclick="setRating(5)">⭐</div>
+          <div class="srow" id="stars-row">
+            <div class="star on" onclick="setRating(1)">⭐</div>
+            <div class="star on" onclick="setRating(2)">⭐</div>
+            <div class="star on" onclick="setRating(3)">⭐</div>
+            <div class="star on" onclick="setRating(4)">⭐</div>
+            <div class="star on" onclick="setRating(5)">⭐</div>
           </div>
         </div>
-
-        <!-- Weather -->
-        <div class="field">
-          <label>อากาศ</label>
-          <div class="weather-chips" id="weather-chips">
-            <div class="weather-chip selected" data-val="sunny" onclick="selectWeather(this)">☀️ แดด</div>
-            <div class="weather-chip" data-val="cloudy" onclick="selectWeather(this)">⛅ เมฆ</div>
-            <div class="weather-chip" data-val="rainy" onclick="selectWeather(this)">🌧️ ฝน</div>
-            <div class="weather-chip" data-val="cool" onclick="selectWeather(this)">🌤️ เย็น</div>
-            <div class="weather-chip" data-val="hot" onclick="selectWeather(this)">🌡️ ร้อน</div>
+        <div class="fld">
+          <label>สภาพอากาศ</label>
+          <div class="wrow" id="wx-row">
+            <div class="wb on" data-v="sunny" onclick="setWx(this)">☀️ แดด</div>
+            <div class="wb" data-v="cloudy" onclick="setWx(this)">⛅ เมฆ</div>
+            <div class="wb" data-v="rainy" onclick="setWx(this)">🌧️ ฝน</div>
+            <div class="wb" data-v="cool" onclick="setWx(this)">🌤️ เย็น</div>
+            <div class="wb" data-v="hot" onclick="setWx(this)">🌡️ ร้อน</div>
           </div>
         </div>
-
-        <!-- Expense -->
-        <div class="field">
+        <div class="fld">
           <label>ค่าใช้จ่าย</label>
-          <div class="expense-wrap">
-            <input type="number" id="ci-expense" placeholder="0" min="0" inputmode="numeric">
-            <div class="expense-unit">บาท</div>
-          </div>
+          <div class="amw"><input type="number" id="ci-exp" placeholder="0" min="0" inputmode="numeric"><span class="amu">บาท</span></div>
         </div>
-
-        <!-- Note -->
-        <div class="field">
-          <label>บันทึก</label>
-          <textarea id="ci-note" placeholder="ความรู้สึก สิ่งที่ประทับใจ หรือเรื่องราว..."></textarea>
+        <div class="fld">
+          <label>บันทึก / ความรู้สึก</label>
+          <textarea id="ci-note" placeholder="สิ่งที่ประทับใจ ต้องจำ หรือเรื่องราวระหว่างทาง..."></textarea>
         </div>
-
-        <!-- Trip -->
-        <div class="field">
-          <label>เพิ่มในทริป (ถ้ามี)</label>
-          <select id="ci-trip"><option value="">-- ไม่เพิ่มในทริป --</option></select>
+        <div class="fld">
+          <label>รูปภาพ</label>
+          <div class="ph-preview" id="ci-photo-prev"></div>
+          <input type="file" id="ci-photo-file" accept="image/*" multiple style="display:none" onchange="onCiPhoto(this)">
+          <button type="button" class="btn-s" style="width:auto;padding:9px 14px;display:inline-flex;align-items:center;gap:5px;font-size:12px;margin-top:5px" onclick="document.getElementById('ci-photo-file').click()">
+            📷 เพิ่มรูปภาพ
+          </button>
         </div>
-
-        <button class="btn-submit" onclick="submitCheckin()">
-          ✅ บันทึกเช็คอิน
-        </button>
+        <div class="fld">
+          <label>เพิ่มเข้าทริป</label>
+          <select id="ci-trip"><option value="">— ไม่ระบุ —</option></select>
+        </div>
+        <button class="btn-g" onclick="submitCheckin()">✅ บันทึกเช็คอิน</button>
+        <button class="btn-s" onclick="resetCi()">🗑️ ล้างฟอร์ม</button>
       </div>
     </div>
 
-    <!-- ═══ TRIPS PANEL ═══ -->
-    <div class="panel" id="panel-trips">
-      <div class="trips-header">
-        <div class="trips-title">🚗 ทริปของฉัน</div>
-        <button class="btn-new-trip" onclick="openSheet('sheet-new-trip')">+ ทริปใหม่</button>
+    <!-- TRIPS -->
+    <div class="panel" id="p-trips">
+      <div class="trip-hdr">
+        <div class="pt">🚗 ทริปของฉัน</div>
+        <button class="btn-new" onclick="openSheet('sh-newtrip')">＋ ทริปใหม่</button>
       </div>
-      <div class="trips-list" id="trips-list">
-        <div class="empty"><div class="empty-ico">🗺️</div><div class="empty-title">ยังไม่มีทริป</div><div class="empty-sub">สร้างทริปเพื่อรวบรวมสถานที่ในการเดินทาง</div></div>
+      <div id="trips-body">
+        <div class="empty"><div class="ei">🗺️</div><div class="et">ยังไม่มีทริป</div><div class="es">สร้างทริปเพื่อรวบรวมสถานที่</div></div>
       </div>
     </div>
 
-    <!-- ═══ MORE PANEL ═══ -->
-    <div class="panel" id="panel-more">
-      <div style="padding:20px 16px 12px;">
-        <div style="font-family:'Space Grotesk',sans-serif;font-size:20px;font-weight:700;color:var(--txt);">เพิ่มเติม</div>
+    <!-- MORE -->
+    <div class="panel" id="p-more">
+      <div class="ph"><div class="pt">เพิ่มเติม</div></div>
+      <div class="moregrid">
+        <div class="moretile mthi" onclick="openSide('sd-timeline')"><div class="mtico">📅</div><div class="mtnm">ไทม์ไลน์</div><div class="mtds">ประวัติการเดินทางทั้งหมด</div></div>
+        <div class="moretile" onclick="openSide('sd-analytics')"><div class="mtico">📊</div><div class="mtnm">สถิติ</div><div class="mtds">วิเคราะห์การเดินทาง</div></div>
+        <div class="moretile" onclick="openSide('sd-game')"><div class="mtico">🏆</div><div class="mtnm">Gamification</div><div class="mtds">Level XP และภารกิจ</div></div>
+        <div class="moretile" onclick="openSide('sd-photos')"><div class="mtico">📸</div><div class="mtnm">Photo Book</div><div class="mtds">คลังภาพสถานที่</div></div>
+        <div class="moretile" onclick="doShare()"><div class="mtico">🔗</div><div class="mtnm">แชร์ลิงก์</div><div class="mtds">แชร์แผนที่ให้เพื่อน</div></div>
+        <div class="moretile" onclick="openSheet('sh-settings')"><div class="mtico">⚙️</div><div class="mtnm">ตั้งค่า</div><div class="mtds">โปรไฟล์และการเชื่อมต่อ</div></div>
       </div>
-      <div class="more-grid">
-        <div class="more-tile highlight" onclick="openSub('sub-timeline')">
-          <div class="mt-icon">📅</div>
-          <div class="mt-name">ไทม์ไลน์</div>
-          <div class="mt-desc">ดูประวัติการเดินทางทั้งหมด</div>
-        </div>
-        <div class="more-tile" onclick="openSub('sub-analytics')">
-          <div class="mt-icon">📊</div>
-          <div class="mt-name">สถิติ</div>
-          <div class="mt-desc">วิเคราะห์การเดินทางของคุณ</div>
-        </div>
-        <div class="more-tile" onclick="openSub('sub-game')">
-          <div class="mt-icon">🏆</div>
-          <div class="mt-name">Gamification</div>
-          <div class="mt-desc">Level XP ภารกิจและรางวัล</div>
-        </div>
-        <div class="more-tile" onclick="openSub('sub-photos')">
-          <div class="mt-icon">📸</div>
-          <div class="mt-name">Photo Book</div>
-          <div class="mt-desc">คลังสถานที่ทั้งหมด</div>
-        </div>
-        <div class="more-tile" onclick="openSheet('sheet-share')">
-          <div class="mt-icon">🔗</div>
-          <div class="mt-name">แชร์ลิงก์</div>
-          <div class="mt-desc">แชร์แผนที่ให้เพื่อน</div>
-        </div>
-        <div class="more-tile" onclick="openSheet('sheet-settings')">
-          <div class="mt-icon">⚙️</div>
-          <div class="mt-name">ตั้งค่า</div>
-          <div class="mt-desc">โปรไฟล์และการเชื่อมต่อ</div>
-        </div>
-      </div>
-
-      <!-- Install PWA hint -->
-      <div id="pwa-hint" style="margin:4px 16px 0;background:linear-gradient(135deg,rgba(56,189,248,0.1),rgba(0,229,160,0.05));border:1px solid rgba(56,189,248,0.2);border-radius:var(--r-md);padding:16px;display:none;">
-        <div style="font-size:14px;font-weight:600;color:var(--sky);margin-bottom:6px;">📱 ติดตั้งเป็น App</div>
-        <div style="font-size:12px;color:var(--txt2);line-height:1.6;margin-bottom:10px;">iOS: กด Share → Add to Home Screen<br>Android: กด ⋮ → Install App</div>
-        <button onclick="installPWA()" style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);border-radius:8px;padding:8px 16px;color:var(--sky);font-size:13px;font-family:'Noto Sans Thai',sans-serif;cursor:pointer;">ติดตั้งเลย</button>
-      </div>
-
-      <div style="height:24px;"></div>
+      <div style="height:20px"></div>
     </div>
+  </div><!-- end content -->
 
-  </div><!-- end #content -->
-
-  <!-- BOTTOM NAV -->
-  <div id="bottom-nav">
-    <button class="nav-btn active" id="nav-home" onclick="showPanel('home')">
-      <div class="nav-icon">🏠</div>
-      <div class="nav-label">หน้าแรก</div>
-    </button>
-    <button class="nav-btn" id="nav-map" onclick="showPanel('map')">
-      <div class="nav-icon">🗺️</div>
-      <div class="nav-label">แผนที่</div>
-    </button>
-    <button class="nav-btn fab-btn" id="nav-checkin" onclick="showPanel('checkin')">
-      <div class="nav-icon">+</div>
-      <div class="nav-label">เช็คอิน</div>
-    </button>
-    <button class="nav-btn" id="nav-trips" onclick="showPanel('trips')">
-      <div class="nav-icon">🚗</div>
-      <div class="nav-label">ทริป</div>
-    </button>
-    <button class="nav-btn" id="nav-more" onclick="showPanel('more')">
-      <div class="nav-icon">⋯</div>
-      <div class="nav-label">เพิ่มเติม</div>
-    </button>
+  <div id="bnav">
+    <button class="nb on" id="nb-home" onclick="navTo('home')"><div class="ni">🏠</div><div class="nl">หน้าแรก</div></button>
+    <button class="nb" id="nb-map" onclick="navTo('map')"><div class="ni">🗺️</div><div class="nl">แผนที่</div></button>
+    <button class="nb fab" id="nb-checkin" onclick="navTo('checkin')"><div class="ni">＋</div><div class="nl">เช็คอิน</div></button>
+    <button class="nb" id="nb-trips" onclick="navTo('trips')"><div class="ni">🚗</div><div class="nl">ทริป</div></button>
+    <button class="nb" id="nb-more" onclick="navTo('more')"><div class="ni">•••</div><div class="nl">เพิ่มเติม</div></button>
   </div>
+</div><!-- end shell -->
 
-</div><!-- end #app -->
-
-<!-- ══════════════════════════════════════════
-     SUB-PANELS
-══════════════════════════════════════════ -->
-
-<!-- Timeline -->
-<div class="sub-panel" id="sub-timeline">
-  <div class="sub-header">
-    <div class="sub-back" onclick="closeSub('sub-timeline')">←</div>
-    <div class="sub-title">📅 ไทม์ไลน์</div>
+<!-- ═══ SIDE PANELS ═══ -->
+<div class="side" id="sd-timeline">
+  <div class="sideh">
+    <button class="backbtn" onclick="closeSide('sd-timeline')">←</button>
+    <div class="sidetitle">📅 ไทม์ไลน์</div>
   </div>
-  <div class="tl-search-bar">
-    <input type="text" placeholder="🔍 ค้นหา..." id="tl-search" oninput="renderTimeline()">
-    <select id="tl-filter" onchange="renderTimeline()">
+  <div class="tlf">
+    <input type="text" id="tl-q" placeholder="🔍 ค้นหา..." oninput="renderTL()">
+    <select id="tl-f" onchange="renderTL()" style="-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12'%3E%3Cpath fill='%234d607a' d='M6 8L1 3h10z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 9px center;padding-right:26px">
       <option value="">ทั้งหมด</option>
       <option value="attraction">ท่องเที่ยว</option>
       <option value="food">อาหาร</option>
@@ -1388,1271 +570,1056 @@ body::before {
       <option value="cafe">คาเฟ่</option>
       <option value="temple">วัด</option>
       <option value="nature">ธรรมชาติ</option>
+      <option value="shopping">ช้อปปิ้ง</option>
     </select>
   </div>
-  <div class="sub-content">
-    <div class="tl-body" id="tl-body">
-      <div class="empty"><div class="empty-ico">📅</div><div class="empty-title">ยังไม่มีข้อมูล</div></div>
+  <div class="sidebody"><div class="tlb" id="tlbody"></div></div>
+</div>
+
+<div class="side" id="sd-analytics">
+  <div class="sideh">
+    <button class="backbtn" onclick="closeSide('sd-analytics')">←</button>
+    <div class="sidetitle">📊 สถิติ</div>
+  </div>
+  <div class="sidebody">
+    <div class="anb">
+      <div class="ang">
+        <div class="anm"><div class="anml">จังหวัด</div><div class="anmv" id="an-pv">0</div><div class="anms">จาก 77</div></div>
+        <div class="anm"><div class="anml">เช็คอิน</div><div class="anmv" id="an-ci">0</div><div class="anms">ครั้ง</div></div>
+        <div class="anm"><div class="anml">ค่าใช้จ่าย</div><div class="anmv" id="an-ex" style="font-size:19px">0</div><div class="anms">บาท</div></div>
+        <div class="anm"><div class="anml">ทริป</div><div class="anmv" id="an-tr">0</div><div class="anms">ทริป</div></div>
+      </div>
+      <div class="anch"><div class="anct">เช็คอินรายเดือน (ปีนี้)</div><div class="ancw"><canvas id="ch-m"></canvas></div></div>
+      <div class="anch"><div class="anct">ประเภทสถานที่</div><div class="ancw"><canvas id="ch-t"></canvas></div></div>
+      <div class="anch"><div class="anct">ค่าใช้จ่ายรายเดือน (บาท)</div><div class="ancw"><canvas id="ch-e"></canvas></div></div>
+      <div class="anch"><div class="anct">Contribution Heatmap</div><div class="hmscroll"><div id="hmg"></div></div></div>
+      <div style="height:12px"></div>
     </div>
   </div>
 </div>
 
-<!-- Analytics -->
-<div class="sub-panel" id="sub-analytics">
-  <div class="sub-header">
-    <div class="sub-back" onclick="closeSub('sub-analytics')">←</div>
-    <div class="sub-title">📊 สถิติ</div>
+<div class="side" id="sd-game">
+  <div class="sideh">
+    <button class="backbtn" onclick="closeSide('sd-game')">←</button>
+    <div class="sidetitle">🏆 Gamification</div>
   </div>
-  <div class="sub-content">
-    <div class="an-body" id="an-body">
-      <div class="an-metric-row">
-        <div class="an-metric"><div class="anm-label">จังหวัด</div><div class="anm-val" id="an-prov">0</div><div class="anm-sub">จาก 77</div></div>
-        <div class="an-metric"><div class="anm-label">เช็คอิน</div><div class="anm-val" id="an-ci">0</div><div class="anm-sub">ครั้ง</div></div>
-        <div class="an-metric"><div class="anm-label">ค่าใช้จ่าย</div><div class="anm-val" id="an-exp" style="font-size:20px;">0</div><div class="anm-sub">บาท</div></div>
-        <div class="an-metric"><div class="anm-label">ทริป</div><div class="anm-val" id="an-trips">0</div><div class="anm-sub">ทริป</div></div>
-      </div>
-
-      <div class="an-chart-card">
-        <div class="an-chart-title">เช็คอินรายเดือน (ปีนี้)</div>
-        <div class="an-chart-wrap"><canvas id="chart-monthly"></canvas></div>
-      </div>
-
-      <div class="an-chart-card">
-        <div class="an-chart-title">ประเภทสถานที่</div>
-        <div class="an-chart-wrap"><canvas id="chart-types"></canvas></div>
-      </div>
-
-      <div class="an-chart-card">
-        <div class="an-chart-title">Contribution Heatmap</div>
-        <div class="hm-wrap">
-          <div id="heatmap-grid"></div>
+  <div class="sidebody">
+    <div class="gmb">
+      <div class="gmhero">
+        <div class="gmlv"><div class="glt">LV</div><div class="gln" id="gm-lv">1</div></div>
+        <div class="gmi">
+          <div class="gmn" id="gm-nm">นักเดินทาง</div>
+          <div class="gmt" id="gm-tt">« มือใหม่ »</div>
+          <div class="gmbar"><div class="gmfill" id="gm-fill" style="width:5%"></div></div>
+          <div class="gmxp" id="gm-xp">0 / 100 XP</div>
         </div>
       </div>
-
-      <div class="an-chart-card">
-        <div class="an-chart-title">ค่าใช้จ่ายรายเดือน (บาท)</div>
-        <div class="an-chart-wrap"><canvas id="chart-expense"></canvas></div>
-      </div>
-
-      <div style="height:20px;"></div>
+      <div class="mstitle">ภารกิจทั้งหมด</div>
+      <div class="msg" id="ms-grid"></div>
+      <div style="height:12px"></div>
     </div>
   </div>
 </div>
 
-<!-- Gamification -->
-<div class="sub-panel" id="sub-game">
-  <div class="sub-header">
-    <div class="sub-back" onclick="closeSub('sub-game')">←</div>
-    <div class="sub-title">🏆 Gamification</div>
-  </div>
-  <div class="sub-content">
-    <div class="gm-body">
-      <div class="gm-xp-card">
-        <div class="gm-lv">
-          <div class="glv-t">LV</div>
-          <div class="glv-n" id="gm-level">1</div>
-        </div>
-        <div class="gm-info">
-          <div class="gm-name" id="gm-name">นักเดินทาง</div>
-          <div class="gm-title" id="gm-title">« มือใหม่หัดเดินทาง »</div>
-          <div class="gm-bar-bg"><div class="gm-bar" id="gm-bar" style="width:5%"></div></div>
-          <div class="gm-xp-text" id="gm-xp-text">0 / 100 XP</div>
-        </div>
-      </div>
-      <div class="missions-title">ภารกิจทั้งหมด</div>
-      <div class="mission-grid" id="mission-grid"></div>
-      <div style="height:24px;"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Photo Book -->
-<div class="sub-panel" id="sub-photos">
-  <div class="sub-header">
-    <div class="sub-back" onclick="closeSub('sub-photos')">←</div>
-    <div class="sub-title">📸 Photo Book</div>
-    <select id="pb-filter" onchange="renderPhotos()" style="margin-left:auto;background:var(--surface);border:1px solid var(--rim);border-radius:8px;padding:5px 10px;color:var(--txt);font-size:12px;outline:none;-webkit-appearance:none;">
+<div class="side" id="sd-photos">
+  <div class="sideh">
+    <button class="backbtn" onclick="closeSide('sd-photos')">←</button>
+    <div class="sidetitle">📸 Photo Book</div>
+    <select id="pb-filter" onchange="renderPhotos()" style="margin-left:auto;background:var(--bg3);border:1px solid var(--rim);border-radius:7px;padding:4px 22px 4px 9px;color:var(--t);font-size:11px;-webkit-appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Cpath fill='%234d607a' d='M5 7L1 2h8z'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 7px center">
       <option value="">ทุกทริป</option>
     </select>
   </div>
-  <div class="sub-content">
-    <div class="pb-body">
-      <div class="pb-grid" id="pb-grid">
-        <div class="empty" style="grid-column:1/-1;"><div class="empty-ico">📸</div><div class="empty-title">ยังไม่มีสถานที่</div></div>
-      </div>
-    </div>
-  </div>
+  <div class="sidebody"><div class="pbb"><div class="pbg" id="pbg"></div></div></div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     BOTTOM SHEETS
-══════════════════════════════════════════ -->
-
-<!-- New Trip Sheet -->
-<div class="sheet-overlay" id="sheet-new-trip" onclick="closeSheet('sheet-new-trip',event)">
+<!-- ═══ SHEETS ═══ -->
+<div class="overlay" id="sh-newtrip" onclick="mayClose('sh-newtrip',event)">
   <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">🚗 สร้างทริปใหม่</div>
-    <div class="sheet-form">
-      <div class="field"><label>ชื่อทริป *</label><input type="text" id="t-name" placeholder="เช่น ทริปภาคใต้ 3 วัน 2 คืน"></div>
-      <div class="field-row">
-        <div class="field"><label>วันเริ่ม</label><input type="date" id="t-start"></div>
-        <div class="field"><label>วันสิ้นสุด</label><input type="date" id="t-end"></div>
+    <div class="shhndl"></div>
+    <div class="shtitle">🚗 สร้างทริปใหม่</div>
+    <div class="shform">
+      <div class="fld"><label>ชื่อทริป *</label><input type="text" id="t-name" placeholder="เช่น ทริปภาคใต้ 3 วัน 2 คืน"></div>
+      <div class="frow">
+        <div class="fld"><label>วันเริ่มต้น *</label><input type="date" id="t-start"></div>
+        <div class="fld"><label>วันสิ้นสุด</label><input type="date" id="t-end"></div>
       </div>
-      <div class="field"><label>หมายเหตุ</label><textarea id="t-note" placeholder="เป้าหมาย งบประมาณ หรือโน้ตต่างๆ..."></textarea></div>
-      <button class="btn-sheet" onclick="createTrip()">✅ สร้างทริป</button>
-      <button class="btn-sheet secondary" onclick="closeSheet('sheet-new-trip')">ยกเลิก</button>
+      <div class="fld"><label>หมายเหตุ</label><textarea id="t-note" placeholder="จุดหมาย งบประมาณ สิ่งต้องเตรียม..."></textarea></div>
+      <button class="shbtn shg" onclick="createTrip()">✅ สร้างทริป</button>
+      <button class="shbtn shs" onclick="closeSheet('sh-newtrip')">ยกเลิก</button>
     </div>
   </div>
 </div>
 
-<!-- Settings Sheet -->
-<div class="sheet-overlay" id="sheet-settings" onclick="closeSheet('sheet-settings',event)">
+<div class="overlay" id="sh-settings" onclick="mayClose('sh-settings',event)">
   <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">⚙️ ตั้งค่า</div>
-    <div class="settings-list">
-      <div class="settings-item" onclick="openProfileEdit()">
-        <div class="si-icon" style="background:var(--jade3);">👤</div>
-        <div class="si-text">
-          <div class="si-label">โปรไฟล์</div>
-          <div class="si-sub" id="si-profile-sub">แก้ไขชื่อและข้อมูล</div>
-        </div>
-        <div class="si-arrow">›</div>
+    <div class="shhndl"></div>
+    <div class="shtitle">⚙️ ตั้งค่า</div>
+    <div class="stl">
+      <div class="sti" onclick="openSheet('sh-profile');closeSheet('sh-settings')">
+        <div class="stii" style="background:var(--g3)">👤</div>
+        <div class="stib"><div class="stil">โปรไฟล์</div><div class="stis" id="st-pname">แก้ไขชื่อ</div></div>
+        <div class="stiArr">›</div>
       </div>
-      <div class="settings-item" onclick="openGASSetup()">
-        <div class="si-icon" style="background:rgba(56,189,248,0.1);">🔗</div>
-        <div class="si-text">
-          <div class="si-label">Google Apps Script</div>
-          <div class="si-sub" id="si-gas-sub">ยังไม่ได้เชื่อมต่อ</div>
-        </div>
-        <div class="si-arrow">›</div>
+      <div class="sti" onclick="openSheet('sh-gas');closeSheet('sh-settings')">
+        <div class="stii" style="background:rgba(56,196,245,.12)">🔗</div>
+        <div class="stib"><div class="stil">Google Apps Script</div><div class="stis" id="st-gas">ยังไม่ได้เชื่อมต่อ</div></div>
+        <div class="stiArr">›</div>
       </div>
-      <div class="settings-item" onclick="syncWithGAS()">
-        <div class="si-icon" style="background:rgba(167,139,250,0.1);">🔄</div>
-        <div class="si-text">
-          <div class="si-label">Sync ข้อมูล</div>
-          <div class="si-sub" id="si-sync-sub">ซิงค์กับ Google Sheets</div>
-        </div>
-        <div class="si-arrow">›</div>
+      <div class="sti" onclick="doSync();closeSheet('sh-settings')">
+        <div class="stii" style="background:rgba(167,139,250,.12)">🔄</div>
+        <div class="stib"><div class="stil">Sync ข้อมูล</div><div class="stis" id="st-sync">ซิงค์กับ Google Sheets</div></div>
+        <div class="stiArr">›</div>
       </div>
-      <div class="settings-item" onclick="exportData()">
-        <div class="si-icon" style="background:rgba(255,184,48,0.1);">📥</div>
-        <div class="si-text">
-          <div class="si-label">Export ข้อมูล</div>
-          <div class="si-sub">ดาวน์โหลดเป็น JSON</div>
-        </div>
-        <div class="si-arrow">›</div>
+      <div class="sti" onclick="doExport();closeSheet('sh-settings')">
+        <div class="stii" style="background:rgba(255,184,48,.12)">📥</div>
+        <div class="stib"><div class="stil">Export JSON</div><div class="stis">ดาวน์โหลดข้อมูลสำรอง</div></div>
+        <div class="stiArr">›</div>
       </div>
-      <div class="settings-item" onclick="importData()">
-        <div class="si-icon" style="background:rgba(255,184,48,0.1);">📤</div>
-        <div class="si-text">
-          <div class="si-label">Import ข้อมูล</div>
-          <div class="si-sub">นำเข้าจาก JSON</div>
-        </div>
-        <div class="si-arrow">›</div>
+      <div class="sti" onclick="doImport()">
+        <div class="stii" style="background:rgba(255,184,48,.12)">📤</div>
+        <div class="stib"><div class="stil">Import JSON</div><div class="stis">นำเข้าข้อมูลสำรอง</div></div>
+        <div class="stiArr">›</div>
       </div>
-      <div class="settings-item" onclick="clearAllData()">
-        <div class="si-icon" style="background:rgba(255,95,126,0.1);">🗑️</div>
-        <div class="si-text">
-          <div class="si-label" style="color:var(--rose);">ล้างข้อมูลทั้งหมด</div>
-          <div class="si-sub">ไม่สามารถกู้คืนได้</div>
-        </div>
-        <div class="si-arrow">›</div>
+      <div class="sti" onclick="doClear()">
+        <div class="stii" style="background:rgba(255,90,120,.12)">🗑️</div>
+        <div class="stib"><div class="stil" style="color:var(--rose)">ล้างข้อมูลทั้งหมด</div><div class="stis">ไม่สามารถกู้คืนได้</div></div>
+        <div class="stiArr">›</div>
       </div>
     </div>
-    <div style="padding:8px 20px 4px;font-size:12px;color:var(--txt3);text-align:center;">Checkin TH v2.0 · Made with ❤️</div>
+    <div style="text-align:center;padding:14px;font-size:10px;color:var(--t3)">Checkin TH v3.0 · Made with ❤️ in Thailand</div>
   </div>
 </div>
 
-<!-- Profile Edit Sheet -->
-<div class="sheet-overlay" id="sheet-profile" onclick="closeSheet('sheet-profile',event)">
+<div class="overlay" id="sh-profile" onclick="mayClose('sh-profile',event)">
   <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">👤 แก้ไขโปรไฟล์</div>
-    <div class="sheet-form">
-      <div class="field"><label>ชื่อ</label><input type="text" id="p-name" placeholder="ชื่อของคุณ"></div>
-      <button class="btn-sheet" onclick="saveProfile()">💾 บันทึก</button>
+    <div class="shhndl"></div>
+    <div class="shtitle">👤 แก้ไขโปรไฟล์</div>
+    <div class="shform">
+      <div class="fld"><label>ชื่อของคุณ</label><input type="text" id="p-name" placeholder="ชื่อนักเดินทาง"></div>
+      <button class="shbtn shg" onclick="saveProfile()">💾 บันทึก</button>
     </div>
   </div>
 </div>
 
-<!-- GAS Setup Sheet -->
-<div class="sheet-overlay" id="sheet-gas" onclick="closeSheet('sheet-gas',event)">
+<div class="overlay" id="sh-gas" onclick="mayClose('sh-gas',event)">
   <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">🔗 Google Apps Script</div>
-    <div class="sheet-form">
-      <div style="font-size:13px;color:var(--txt2);line-height:1.8;background:var(--surface);border-radius:var(--r-sm);padding:12px;">
-        <strong style="color:var(--txt);">วิธีตั้งค่า:</strong><br>
-        1. เปิด Google Apps Script<br>
-        2. วาง Code.gs ที่ได้รับ<br>
-        3. Deploy → Web App → Anyone<br>
-        4. Copy URL มาวางด้านล่าง
+    <div class="shhndl"></div>
+    <div class="shtitle">🔗 Google Apps Script</div>
+    <div class="shform">
+      <div class="infobox">
+        <strong>วิธีตั้งค่า:</strong><br>
+        1. สร้าง Google Sheet ใหม่<br>
+        2. Extensions → Apps Script<br>
+        3. วางโค้ดจากไฟล์ Code.gs ที่ได้รับ<br>
+        4. Deploy → New Deployment → Web App<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;Execute as: Me · Access: Anyone<br>
+        5. คัดลอก URL มาวางด้านล่าง
       </div>
-      <div class="field"><label>Web App URL</label><input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
-      <div class="field"><label>User ID (สำหรับ Multi-user)</label><input type="text" id="gas-uid" placeholder="อีเมลหรือ UUID ของคุณ" readonly></div>
-      <button class="btn-sheet" onclick="saveGAS()">🔗 เชื่อมต่อ</button>
-      <button class="btn-sheet secondary" onclick="testGAS()">🧪 ทดสอบการเชื่อมต่อ</button>
+      <div class="fld"><label>Web App URL</label><input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
+      <div class="fld"><label>User ID (ของคุณ — อ่านอย่างเดียว)</label><input type="text" id="gas-uid" readonly style="opacity:.55;font-size:11px"></div>
+      <button class="shbtn shg" onclick="saveGAS()">🔗 เชื่อมต่อและ Sync</button>
+      <button class="shbtn shs" onclick="testGAS()">🧪 ทดสอบการเชื่อมต่อ</button>
     </div>
   </div>
 </div>
 
-<!-- Share Sheet -->
-<div class="sheet-overlay" id="sheet-share" onclick="closeSheet('sheet-share',event)">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">🔗 แชร์แผนที่</div>
-    <div class="sheet-form">
-      <div style="font-size:13px;color:var(--txt2);line-height:1.7;">สร้างลิงก์สาธารณะแบบอ่านอย่างเดียว หมดอายุ 30 วัน</div>
-      <div style="background:var(--surface2);border:1px solid var(--rim);border-radius:var(--r-sm);padding:12px;font-size:12px;color:var(--txt2);word-break:break-all;font-family:monospace;" id="share-url-display">กด "สร้างลิงก์" เพื่อเริ่ม</div>
-      <button class="btn-sheet" onclick="generateShareLink()">🔗 สร้างลิงก์</button>
-      <button class="btn-sheet secondary" onclick="copyShareLink()">📋 คัดลอกลิงก์</button>
-    </div>
-  </div>
+<!-- Photo Viewer -->
+<div id="pv" onclick="closePV()">
+  <div id="pvclose" onclick="closePV()">✕</div>
+  <img id="pvimg" src="" alt="">
+  <div id="pvcap"></div>
 </div>
 
-<!-- TOAST -->
 <div id="toast"></div>
 
-<!-- ══════════════════════════════════════════
-     SCRIPTS
-══════════════════════════════════════════ -->
 <script>
-'use strict';
+// ══════════════════════════════════
+// DATABASE
+// ══════════════════════════════════
+const DBKEY='ctv3';
+let db=dbLoad();
 
-// ════════════════════════════════════════
-// CONFIG
-// ════════════════════════════════════════
-const DB_KEY = 'checkin_th_v2';
-const LAST_SYNC_KEY = 'checkin_th_last_sync';
-
-// ════════════════════════════════════════
-// DATA
-// ════════════════════════════════════════
-function getDB() {
-  try { const r = localStorage.getItem(DB_KEY); return r ? JSON.parse(r) : newDB(); }
-  catch(e) { return newDB(); }
+function dbLoad(){
+  try{const r=localStorage.getItem(DBKEY);return r?JSON.parse(r):dbFresh();}
+  catch{return dbFresh();}
 }
-function saveDB(d) { localStorage.setItem(DB_KEY, JSON.stringify(d)); }
-function newDB() {
-  const uid = localStorage.getItem('checkin_uid') || crypto.randomUUID();
-  localStorage.setItem('checkin_uid', uid);
-  return { user: { name: 'นักเดินทาง', gasUrl: '', userId: uid }, checkins: [], trips: [], xp: 0 };
+function dbSave(){
+  try{localStorage.setItem(DBKEY,JSON.stringify(db));}
+  catch(e){toast('⚠️ พื้นที่เก็บข้อมูลเต็ม ลองลบรูปบางส่วน','err');}
+}
+function dbFresh(){
+  let uid=localStorage.getItem('ct_uid');
+  if(!uid){uid=crypto.randomUUID?crypto.randomUUID():Date.now().toString(36);localStorage.setItem('ct_uid',uid);}
+  return{user:{name:'นักเดินทาง',gasUrl:'',uid},checkins:[],trips:[],xp:0};
 }
 
-let db = getDB();
-
-// ════════════════════════════════════════
-// PROVINCES
-// ════════════════════════════════════════
-const PROVINCES = [
-  {n:'กรุงเทพมหานคร',r:'ภาคกลาง',lat:13.754,lng:100.501},
-  {n:'กระบี่',r:'ภาคใต้',lat:8.093,lng:98.906},
-  {n:'กาญจนบุรี',r:'ภาคตะวันตก',lat:14.002,lng:99.548},
-  {n:'กาฬสินธุ์',r:'ภาคอีสาน',lat:16.433,lng:103.506},
-  {n:'กำแพงเพชร',r:'ภาคเหนือ',lat:16.470,lng:99.522},
-  {n:'ขอนแก่น',r:'ภาคอีสาน',lat:16.441,lng:102.836},
-  {n:'จันทบุรี',r:'ภาคตะวันออก',lat:12.611,lng:102.104},
-  {n:'ฉะเชิงเทรา',r:'ภาคตะวันออก',lat:13.690,lng:101.078},
-  {n:'ชลบุรี',r:'ภาคตะวันออก',lat:13.362,lng:100.985},
-  {n:'ชัยนาท',r:'ภาคกลาง',lat:15.185,lng:100.127},
-  {n:'ชัยภูมิ',r:'ภาคอีสาน',lat:15.807,lng:102.032},
-  {n:'ชุมพร',r:'ภาคใต้',lat:10.494,lng:99.180},
-  {n:'เชียงราย',r:'ภาคเหนือ',lat:19.910,lng:99.840},
-  {n:'เชียงใหม่',r:'ภาคเหนือ',lat:18.788,lng:98.985},
-  {n:'ตรัง',r:'ภาคใต้',lat:7.559,lng:99.611},
-  {n:'ตราด',r:'ภาคตะวันออก',lat:12.243,lng:102.517},
-  {n:'ตาก',r:'ภาคเหนือ',lat:16.880,lng:99.123},
-  {n:'นครนายก',r:'ภาคกลาง',lat:14.205,lng:101.213},
-  {n:'นครปฐม',r:'ภาคกลาง',lat:13.820,lng:100.065},
-  {n:'นครพนม',r:'ภาคอีสาน',lat:17.392,lng:104.773},
-  {n:'นครราชสีมา',r:'ภาคอีสาน',lat:14.979,lng:102.098},
-  {n:'นครศรีธรรมราช',r:'ภาคใต้',lat:8.432,lng:99.960},
-  {n:'นครสวรรค์',r:'ภาคกลาง',lat:15.705,lng:100.137},
-  {n:'นนทบุรี',r:'ภาคกลาง',lat:13.851,lng:100.523},
-  {n:'นราธิวาส',r:'ภาคใต้',lat:6.426,lng:101.823},
-  {n:'น่าน',r:'ภาคเหนือ',lat:18.793,lng:100.773},
-  {n:'บึงกาฬ',r:'ภาคอีสาน',lat:18.361,lng:103.646},
-  {n:'บุรีรัมย์',r:'ภาคอีสาน',lat:14.993,lng:103.102},
-  {n:'ปทุมธานี',r:'ภาคกลาง',lat:14.020,lng:100.525},
-  {n:'ประจวบคีรีขันธ์',r:'ภาคกลาง',lat:11.813,lng:99.798},
-  {n:'ปราจีนบุรี',r:'ภาคตะวันออก',lat:14.052,lng:101.368},
-  {n:'ปัตตานี',r:'ภาคใต้',lat:6.869,lng:101.250},
-  {n:'พระนครศรีอยุธยา',r:'ภาคกลาง',lat:14.356,lng:100.585},
-  {n:'พะเยา',r:'ภาคเหนือ',lat:19.044,lng:99.882},
-  {n:'พังงา',r:'ภาคใต้',lat:8.450,lng:98.526},
-  {n:'พัทลุง',r:'ภาคใต้',lat:7.617,lng:100.075},
-  {n:'พิจิตร',r:'ภาคเหนือ',lat:16.442,lng:100.349},
-  {n:'พิษณุโลก',r:'ภาคเหนือ',lat:16.826,lng:100.264},
-  {n:'เพชรบุรี',r:'ภาคกลาง',lat:13.111,lng:99.939},
-  {n:'เพชรบูรณ์',r:'ภาคเหนือ',lat:16.421,lng:101.159},
-  {n:'แพร่',r:'ภาคเหนือ',lat:18.145,lng:100.141},
-  {n:'ภูเก็ต',r:'ภาคใต้',lat:7.879,lng:98.398},
-  {n:'มหาสารคาม',r:'ภาคอีสาน',lat:16.185,lng:103.304},
-  {n:'มุกดาหาร',r:'ภาคอีสาน',lat:16.543,lng:104.723},
-  {n:'แม่ฮ่องสอน',r:'ภาคเหนือ',lat:19.301,lng:97.968},
-  {n:'ยโสธร',r:'ภาคอีสาน',lat:15.793,lng:104.145},
-  {n:'ยะลา',r:'ภาคใต้',lat:6.540,lng:101.280},
-  {n:'ร้อยเอ็ด',r:'ภาคอีสาน',lat:16.054,lng:103.652},
-  {n:'ระนอง',r:'ภาคใต้',lat:9.960,lng:98.638},
-  {n:'ระยอง',r:'ภาคตะวันออก',lat:12.684,lng:101.282},
-  {n:'ราชบุรี',r:'ภาคกลาง',lat:13.537,lng:99.817},
-  {n:'ลพบุรี',r:'ภาคกลาง',lat:14.799,lng:100.654},
-  {n:'ลำปาง',r:'ภาคเหนือ',lat:18.288,lng:99.490},
-  {n:'ลำพูน',r:'ภาคเหนือ',lat:18.574,lng:99.009},
-  {n:'เลย',r:'ภาคอีสาน',lat:17.487,lng:101.724},
-  {n:'ศรีสะเกษ',r:'ภาคอีสาน',lat:15.117,lng:104.324},
-  {n:'สกลนคร',r:'ภาคอีสาน',lat:17.154,lng:104.148},
-  {n:'สงขลา',r:'ภาคใต้',lat:7.189,lng:100.595},
-  {n:'สตูล',r:'ภาคใต้',lat:6.613,lng:100.068},
-  {n:'สมุทรปราการ',r:'ภาคกลาง',lat:13.600,lng:100.575},
-  {n:'สมุทรสงคราม',r:'ภาคกลาง',lat:13.409,lng:99.997},
-  {n:'สมุทรสาคร',r:'ภาคกลาง',lat:13.548,lng:100.275},
-  {n:'สระแก้ว',r:'ภาคตะวันออก',lat:13.824,lng:102.064},
-  {n:'สระบุรี',r:'ภาคกลาง',lat:14.529,lng:100.911},
-  {n:'สิงห์บุรี',r:'ภาคกลาง',lat:14.893,lng:100.402},
-  {n:'สุโขทัย',r:'ภาคเหนือ',lat:17.006,lng:99.827},
-  {n:'สุพรรณบุรี',r:'ภาคกลาง',lat:14.473,lng:100.118},
-  {n:'สุราษฎร์ธานี',r:'ภาคใต้',lat:9.139,lng:99.330},
-  {n:'สุรินทร์',r:'ภาคอีสาน',lat:14.883,lng:103.495},
-  {n:'หนองคาย',r:'ภาคอีสาน',lat:17.877,lng:102.742},
-  {n:'หนองบัวลำภู',r:'ภาคอีสาน',lat:17.204,lng:102.441},
-  {n:'อ่างทอง',r:'ภาคกลาง',lat:14.590,lng:100.455},
-  {n:'อำนาจเจริญ',r:'ภาคอีสาน',lat:15.868,lng:104.626},
-  {n:'อุดรธานี',r:'ภาคอีสาน',lat:17.416,lng:102.788},
-  {n:'อุตรดิตถ์',r:'ภาคเหนือ',lat:17.620,lng:100.099},
-  {n:'อุทัยธานี',r:'ภาคกลาง',lat:15.383,lng:100.024},
+// ══════════════════════════════════
+// PROVINCE DATA
+// ══════════════════════════════════
+const PV=[
+  {n:'กรุงเทพมหานคร',r:'ภาคกลาง',lat:13.754,lng:100.501},{n:'กระบี่',r:'ภาคใต้',lat:8.093,lng:98.906},
+  {n:'กาญจนบุรี',r:'ภาคตะวันตก',lat:14.002,lng:99.548},{n:'กาฬสินธุ์',r:'ภาคอีสาน',lat:16.433,lng:103.506},
+  {n:'กำแพงเพชร',r:'ภาคเหนือ',lat:16.470,lng:99.522},{n:'ขอนแก่น',r:'ภาคอีสาน',lat:16.441,lng:102.836},
+  {n:'จันทบุรี',r:'ภาคตะวันออก',lat:12.611,lng:102.104},{n:'ฉะเชิงเทรา',r:'ภาคตะวันออก',lat:13.690,lng:101.078},
+  {n:'ชลบุรี',r:'ภาคตะวันออก',lat:13.362,lng:100.985},{n:'ชัยนาท',r:'ภาคกลาง',lat:15.185,lng:100.127},
+  {n:'ชัยภูมิ',r:'ภาคอีสาน',lat:15.807,lng:102.032},{n:'ชุมพร',r:'ภาคใต้',lat:10.494,lng:99.180},
+  {n:'เชียงราย',r:'ภาคเหนือ',lat:19.910,lng:99.840},{n:'เชียงใหม่',r:'ภาคเหนือ',lat:18.788,lng:98.985},
+  {n:'ตรัง',r:'ภาคใต้',lat:7.559,lng:99.611},{n:'ตราด',r:'ภาคตะวันออก',lat:12.243,lng:102.517},
+  {n:'ตาก',r:'ภาคเหนือ',lat:16.880,lng:99.123},{n:'นครนายก',r:'ภาคกลาง',lat:14.205,lng:101.213},
+  {n:'นครปฐม',r:'ภาคกลาง',lat:13.820,lng:100.065},{n:'นครพนม',r:'ภาคอีสาน',lat:17.392,lng:104.773},
+  {n:'นครราชสีมา',r:'ภาคอีสาน',lat:14.979,lng:102.098},{n:'นครศรีธรรมราช',r:'ภาคใต้',lat:8.432,lng:99.960},
+  {n:'นครสวรรค์',r:'ภาคกลาง',lat:15.705,lng:100.137},{n:'นนทบุรี',r:'ภาคกลาง',lat:13.851,lng:100.523},
+  {n:'นราธิวาส',r:'ภาคใต้',lat:6.426,lng:101.823},{n:'น่าน',r:'ภาคเหนือ',lat:18.793,lng:100.773},
+  {n:'บึงกาฬ',r:'ภาคอีสาน',lat:18.361,lng:103.646},{n:'บุรีรัมย์',r:'ภาคอีสาน',lat:14.993,lng:103.102},
+  {n:'ปทุมธานี',r:'ภาคกลาง',lat:14.020,lng:100.525},{n:'ประจวบคีรีขันธ์',r:'ภาคกลาง',lat:11.813,lng:99.798},
+  {n:'ปราจีนบุรี',r:'ภาคตะวันออก',lat:14.052,lng:101.368},{n:'ปัตตานี',r:'ภาคใต้',lat:6.869,lng:101.250},
+  {n:'พระนครศรีอยุธยา',r:'ภาคกลาง',lat:14.356,lng:100.585},{n:'พะเยา',r:'ภาคเหนือ',lat:19.044,lng:99.882},
+  {n:'พังงา',r:'ภาคใต้',lat:8.450,lng:98.526},{n:'พัทลุง',r:'ภาคใต้',lat:7.617,lng:100.075},
+  {n:'พิจิตร',r:'ภาคเหนือ',lat:16.442,lng:100.349},{n:'พิษณุโลก',r:'ภาคเหนือ',lat:16.826,lng:100.264},
+  {n:'เพชรบุรี',r:'ภาคกลาง',lat:13.111,lng:99.939},{n:'เพชรบูรณ์',r:'ภาคเหนือ',lat:16.421,lng:101.159},
+  {n:'แพร่',r:'ภาคเหนือ',lat:18.145,lng:100.141},{n:'ภูเก็ต',r:'ภาคใต้',lat:7.879,lng:98.398},
+  {n:'มหาสารคาม',r:'ภาคอีสาน',lat:16.185,lng:103.304},{n:'มุกดาหาร',r:'ภาคอีสาน',lat:16.543,lng:104.723},
+  {n:'แม่ฮ่องสอน',r:'ภาคเหนือ',lat:19.301,lng:97.968},{n:'ยโสธร',r:'ภาคอีสาน',lat:15.793,lng:104.145},
+  {n:'ยะลา',r:'ภาคใต้',lat:6.540,lng:101.280},{n:'ร้อยเอ็ด',r:'ภาคอีสาน',lat:16.054,lng:103.652},
+  {n:'ระนอง',r:'ภาคใต้',lat:9.960,lng:98.638},{n:'ระยอง',r:'ภาคตะวันออก',lat:12.684,lng:101.282},
+  {n:'ราชบุรี',r:'ภาคกลาง',lat:13.537,lng:99.817},{n:'ลพบุรี',r:'ภาคกลาง',lat:14.799,lng:100.654},
+  {n:'ลำปาง',r:'ภาคเหนือ',lat:18.288,lng:99.490},{n:'ลำพูน',r:'ภาคเหนือ',lat:18.574,lng:99.009},
+  {n:'เลย',r:'ภาคอีสาน',lat:17.487,lng:101.724},{n:'ศรีสะเกษ',r:'ภาคอีสาน',lat:15.117,lng:104.324},
+  {n:'สกลนคร',r:'ภาคอีสาน',lat:17.154,lng:104.148},{n:'สงขลา',r:'ภาคใต้',lat:7.189,lng:100.595},
+  {n:'สตูล',r:'ภาคใต้',lat:6.613,lng:100.068},{n:'สมุทรปราการ',r:'ภาคกลาง',lat:13.600,lng:100.575},
+  {n:'สมุทรสงคราม',r:'ภาคกลาง',lat:13.409,lng:99.997},{n:'สมุทรสาคร',r:'ภาคกลาง',lat:13.548,lng:100.275},
+  {n:'สระแก้ว',r:'ภาคตะวันออก',lat:13.824,lng:102.064},{n:'สระบุรี',r:'ภาคกลาง',lat:14.529,lng:100.911},
+  {n:'สิงห์บุรี',r:'ภาคกลาง',lat:14.893,lng:100.402},{n:'สุโขทัย',r:'ภาคเหนือ',lat:17.006,lng:99.827},
+  {n:'สุพรรณบุรี',r:'ภาคกลาง',lat:14.473,lng:100.118},{n:'สุราษฎร์ธานี',r:'ภาคใต้',lat:9.139,lng:99.330},
+  {n:'สุรินทร์',r:'ภาคอีสาน',lat:14.883,lng:103.495},{n:'หนองคาย',r:'ภาคอีสาน',lat:17.877,lng:102.742},
+  {n:'หนองบัวลำภู',r:'ภาคอีสาน',lat:17.204,lng:102.441},{n:'อ่างทอง',r:'ภาคกลาง',lat:14.590,lng:100.455},
+  {n:'อำนาจเจริญ',r:'ภาคอีสาน',lat:15.868,lng:104.626},{n:'อุดรธานี',r:'ภาคอีสาน',lat:17.416,lng:102.788},
+  {n:'อุตรดิตถ์',r:'ภาคเหนือ',lat:17.620,lng:100.099},{n:'อุทัยธานี',r:'ภาคกลาง',lat:15.383,lng:100.024},
   {n:'อุบลราชธานี',r:'ภาคอีสาน',lat:15.245,lng:104.847},
 ];
+const pvMap=Object.fromEntries(PV.map(p=>[p.n,p]));
 
-const REGIONS = {
-  'ภาคเหนือ':    { icon:'⛰️', provs:['เชียงใหม่','เชียงราย','ลำปาง','ลำพูน','แพร่','น่าน','พะเยา','แม่ฮ่องสอน','อุตรดิตถ์','กำแพงเพชร','ตาก','พิษณุโลก','พิจิตร','เพชรบูรณ์','สุโขทัย'] },
-  'ภาคอีสาน':    { icon:'🌾', provs:['นครราชสีมา','บุรีรัมย์','สุรินทร์','ศรีสะเกษ','อุบลราชธานี','ยโสธร','ชัยภูมิ','อำนาจเจริญ','หนองบัวลำภู','ขอนแก่น','อุดรธานี','เลย','หนองคาย','มหาสารคาม','กาฬสินธุ์','สกลนคร','นครพนม','มุกดาหาร','บึงกาฬ','ร้อยเอ็ด'] },
-  'ภาคกลาง':    { icon:'🏙️', provs:['กรุงเทพมหานคร','นนทบุรี','ปทุมธานี','สมุทรปราการ','สมุทรสาคร','สมุทรสงคราม','นครปฐม','สุพรรณบุรี','ชัยนาท','สิงห์บุรี','อ่างทอง','พระนครศรีอยุธยา','ลพบุรี','สระบุรี','นครนายก','นครสวรรค์','อุทัยธานี','ราชบุรี','เพชรบุรี','ประจวบคีรีขันธ์'] },
-  'ภาคตะวันออก': { icon:'🌅', provs:['ชลบุรี','ระยอง','จันทบุรี','ตราด','ฉะเชิงเทรา','ปราจีนบุรี','สระแก้ว'] },
-  'ภาคตะวันตก': { icon:'🏔️', provs:['กาญจนบุรี'] },
-  'ภาคใต้':     { icon:'🌊', provs:['นครศรีธรรมราช','กระบี่','พังงา','ภูเก็ต','สุราษฎร์ธานี','ระนอง','ชุมพร','สงขลา','สตูล','ตรัง','พัทลุง','ปัตตานี','ยะลา','นราธิวาส'] },
+const REGIONS={
+  'ภาคเหนือ':{i:'⛰️'},
+  'ภาคอีสาน':{i:'🌾'},
+  'ภาคกลาง':{i:'🏙️'},
+  'ภาคตะวันออก':{i:'🌅'},
+  'ภาคตะวันตก':{i:'🏔️'},
+  'ภาคใต้':{i:'🌊'},
 };
 
-// ════════════════════════════════════════
-// MAP
-// ════════════════════════════════════════
-let map, mapMarkers = [];
+const TYPES=[
+  {v:'attraction',e:'🏛️',l:'ท่องเที่ยว'},
+  {v:'food',e:'🍜',l:'อาหาร'},
+  {v:'hotel',e:'🏨',l:'ที่พัก'},
+  {v:'cafe',e:'☕',l:'คาเฟ่'},
+  {v:'temple',e:'⛩️',l:'วัด'},
+  {v:'nature',e:'🌿',l:'ธรรมชาติ'},
+  {v:'shopping',e:'🛍️',l:'ช้อปปิ้ง'},
+  {v:'other',e:'📍',l:'อื่นๆ'},
+];
+const typeMap=Object.fromEntries(TYPES.map(t=>[t.v,t]));
 
-function initMap() {
-  map = L.map('map', { zoomControl: false, attributionControl: false })
-    .setView([13.0, 101.5], 6);
+// ══════════════════════════════════
+// NAV
+// ══════════════════════════════════
+let curPanel='home';
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 18, subdomains: 'abcd'
-  }).addTo(map);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-    maxZoom: 18, subdomains: 'abcd', opacity: 0.6
-  }).addTo(map);
-
-  renderMapMarkers();
+function navTo(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  const panel=document.getElementById('p-'+name);
+  const btn=document.getElementById('nb-'+name);
+  if(panel)panel.classList.add('on');
+  if(btn)btn.classList.add('on');
+  curPanel=name;
+  if(name==='map'){setTimeout(()=>{leafMap&&leafMap.invalidateSize();},100);}
+  if(name==='checkin'){initCiForm();}
+  if(name==='trips'){renderTrips();}
+  if(name==='home'){renderHome();}
 }
 
-function renderMapMarkers() {
-  mapMarkers.forEach(m => map && map.removeLayer(m));
-  mapMarkers = [];
-
-  const grouped = {};
-  db.checkins.forEach(ci => {
-    const prov = PROVINCES.find(p => p.n === ci.province);
-    if (!prov) return;
-    if (!grouped[ci.province]) grouped[ci.province] = { prov, items: [] };
-    grouped[ci.province].items.push(ci);
-  });
-
-  Object.values(grouped).forEach(({ prov, items }) => {
-    const count = items.length;
-    const size = Math.min(24, 10 + count * 2);
-    const icon = L.divIcon({
-      className: '',
-      html: `<div style="
-        width:${size}px;height:${size}px;
-        background:radial-gradient(circle at 40% 35%, #00e5a0, #00c88a);
-        border:2px solid rgba(255,255,255,0.4);
-        border-radius:50%;
-        display:flex;align-items:center;justify-content:center;
-        font-size:${count > 1 ? 9 : 0}px;font-weight:800;color:#0a0f1a;
-        box-shadow:0 2px 10px rgba(0,229,160,0.5);
-      ">${count > 1 ? count : ''}</div>`,
-      iconSize: [size, size],
-      iconAnchor: [size/2, size/2],
-    });
-
-    const marker = L.marker([prov.lat, prov.lng], { icon }).addTo(map);
-    marker.bindPopup(`
-      <div style="font-family:'Noto Sans Thai',sans-serif;min-width:160px;">
-        <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#0a0f1a;">📍 ${prov.n}</div>
-        ${items.slice(0,3).map(ci => `
-          <div style="font-size:12px;padding:4px 0;border-bottom:1px solid #eee;color:#333;">
-            ${ci.place} · ${formatDateTH(ci.date)}
-          </div>`).join('')}
-        ${items.length > 3 ? `<div style="font-size:11px;color:#888;padding-top:4px;">+${items.length-3} อีก...</div>` : ''}
-      </div>
-    `);
-    mapMarkers.push(marker);
-  });
-
-  updateMapQuickStats();
-}
-
-function updateMapQuickStats() {
-  const visited = new Set(db.checkins.map(c => c.province));
-  document.getElementById('mqs-prov').textContent = visited.size;
-  document.getElementById('mqs-ci').textContent = db.checkins.length;
-  document.getElementById('mqs-trips').textContent = db.trips.length;
-  document.getElementById('mqs-exp').textContent = db.checkins.reduce((s,c)=>s+(c.expense||0),0).toLocaleString();
-}
-
-// ════════════════════════════════════════
-// NAVIGATION
-// ════════════════════════════════════════
-let currentPanel = 'home';
-
-function showPanel(name) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-
-  document.getElementById('panel-' + name).classList.add('active');
-  document.getElementById('nav-' + name)?.classList.add('active');
-  currentPanel = name;
-
-  if (name === 'map') {
-    setTimeout(() => { map && map.invalidateSize(); }, 100);
-  }
-  if (name === 'checkin') {
-    populateTripSelect();
-    // Set today
-    const now = new Date();
-    document.getElementById('ci-date').value = now.toISOString().split('T')[0];
-    document.getElementById('ci-time').value = now.toTimeString().slice(0,5);
-  }
-  if (name === 'trips') renderTrips();
-  if (name === 'home') refreshHome();
-}
-
-function openSub(id) {
+function openSide(id){
   document.getElementById(id).classList.add('open');
-  if (id === 'sub-analytics') renderAnalytics();
-  if (id === 'sub-game') renderGame();
-  if (id === 'sub-timeline') renderTimeline();
-  if (id === 'sub-photos') renderPhotos();
+  if(id==='sd-timeline')renderTL();
+  if(id==='sd-analytics')renderAnalytics();
+  if(id==='sd-game')renderGame();
+  if(id==='sd-photos')renderPhotos();
 }
-function closeSub(id) { document.getElementById(id).classList.remove('open'); }
+function closeSide(id){document.getElementById(id).classList.remove('open');}
+function openSheet(id){document.getElementById(id).classList.add('open');}
+function closeSheet(id){document.getElementById(id).classList.remove('open');}
+function mayClose(id,e){if(e.target.id===id)closeSheet(id);}
 
-function openSheet(id) { document.getElementById(id).classList.add('open'); }
-function closeSheet(id, e) {
-  if (!e || e.target === document.getElementById(id)) {
-    document.getElementById(id).classList.remove('open');
-  }
-}
-
-// ════════════════════════════════════════
+// ══════════════════════════════════
 // HOME
-// ════════════════════════════════════════
-function refreshHome() {
-  const h = new Date().getHours();
-  const greet = h < 12 ? 'สวัสดีตอนเช้า' : h < 17 ? 'สวัสดีตอนบ่าย' : 'สวัสดีตอนเย็น';
-  document.getElementById('greeting').textContent = greet;
-  document.getElementById('home-name').innerHTML = (db.user.name || 'นักเดินทาง') + ' <span>🌏</span>';
+// ══════════════════════════════════
+function renderHome(){
+  const h=new Date().getHours();
+  document.getElementById('greet').textContent=h<12?'สวัสดีตอนเช้า ☀️':h<17?'สวัสดีตอนบ่าย 🌤️':'สวัสดีตอนเย็น 🌙';
+  const nm=db.user.name||'นักเดินทาง';
+  document.getElementById('hname').innerHTML=nm+' <em>🌏</em>';
+  document.getElementById('topav').textContent=(nm[0]||'ฉ');
 
-  const visited = new Set(db.checkins.map(c => c.province));
-  const totalExp = db.checkins.reduce((s,c) => s+(c.expense||0), 0);
+  const visited=new Set(db.checkins.map(c=>c.province));
+  const totalExp=db.checkins.reduce((s,c)=>s+(parseFloat(c.expense)||0),0);
+  document.getElementById('sc-ci').textContent=db.checkins.length;
+  document.getElementById('sc-pv').textContent=visited.size;
+  document.getElementById('sc-tr').textContent=db.trips.length;
+  const ex=totalExp;
+  document.getElementById('sc-ex').textContent=ex>=100000?Math.round(ex/1000)+'K':ex>0?ex.toLocaleString():'0';
 
-  document.getElementById('s-checkins').textContent = db.checkins.length;
-  document.getElementById('s-provinces').textContent = visited.size;
-  document.getElementById('s-trips').textContent = db.trips.length;
-  document.getElementById('s-expense').textContent = totalExp > 9999 ? Math.round(totalExp/1000)+'K' : totalExp.toLocaleString();
-
-  // Topbar
-  document.getElementById('user-avatar').textContent = (db.user.name || 'ME').slice(0,2).toUpperCase();
-
-  updateXPDisplay();
-  renderRecentList();
-  renderRegionProgress();
+  updateXP();
+  renderRecent();
+  renderRegions();
+  renderMapPills();
 }
 
-function updateXPDisplay() {
-  const xp = db.xp || 0;
-  const LEVELS = [0,100,250,450,700,1000,1400,1900,2500,3200,4000,5000,6200,7600,9200,11000,13000,15500,18500,22000];
-  const TITLES = ['มือใหม่หัดเดินทาง','นักเดินทางมือสมัครเล่น','นักท่องเที่ยวรุ่นใหม่','นักสำรวจเริ่มต้น','นักสำรวจฝีมือดี','นักเดินทางมืออาชีพ','ผู้เชี่ยวชาญภูมิภาค','นักสำรวจชั้นเยี่ยม','นักเดินทางระดับมาสเตอร์','นักสำรวจตัวยง','วีรบุรุษแห่งการเดินทาง','ราชานักเดินทาง','เทพนักสำรวจ','ตำนานนักเดินทาง','ผู้พิชิตแผ่นดิน','นักรายงานผู้บรรยาย','ผู้บันทึกดินแดน','นักปราชญ์การเดินทาง','ราชานักสำรวจ','ปรมาจารย์แห่งเส้นทาง'];
+const LEVELS=[0,100,250,450,700,1000,1400,1900,2500,3200,4000,5000,6500,8000,10000,12500,15000,18000,22000,27000];
+const TITLES=['มือใหม่หัดเดินทาง','นักเดินทางฝึกหัด','นักท่องเที่ยวรุ่นใหม่','นักสำรวจเริ่มต้น','นักสำรวจฝีมือดี','นักเดินทางมืออาชีพ','ผู้เชี่ยวชาญภูมิภาค','นักสำรวจชั้นเยี่ยม','มาสเตอร์นักเดินทาง','นักสำรวจตัวยง','วีรบุรุษการเดินทาง','ราชานักเดินทาง','เทพนักสำรวจ','ตำนานนักเดินทาง','ผู้พิชิตแผ่นดิน','ราชาแห่งเส้นทาง','ผู้บันทึกดินแดน','ปรมาจารย์การเดินทาง','ราชานักสำรวจ','ปรมาจารย์แห่งเส้นทาง'];
 
-  let lvl = 0;
-  for (let i = 0; i < LEVELS.length; i++) { if (xp >= LEVELS[i]) lvl = i; }
-
-  const curXP = LEVELS[Math.min(lvl, LEVELS.length-1)];
-  const nxtXP = LEVELS[Math.min(lvl+1, LEVELS.length-1)] || curXP + 1000;
-  const pct = Math.min(100, Math.round((xp - curXP) / (nxtXP - curXP) * 100));
-  const title = TITLES[Math.min(lvl, TITLES.length-1)];
-
-  ['xp-level','gm-level'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = lvl+1; });
-  ['xp-title-text','gm-title'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = `« ${title} »`; });
-  ['xp-bar','gm-bar'].forEach(id => { const el = document.getElementById(id); if(el) el.style.width = pct + '%'; });
-  ['xp-nums','gm-xp-text'].forEach(id => { const el = document.getElementById(id); if(el) el.textContent = `${xp.toLocaleString()} / ${nxtXP.toLocaleString()} XP`; });
-  const gn = document.getElementById('gm-name'); if(gn) gn.textContent = db.user.name || 'นักเดินทาง';
-
-  document.getElementById('stat-level') && (document.getElementById('stat-level').textContent = lvl+1);
+function updateXP(){
+  const xp=db.xp||0;
+  let lv=0;for(let i=0;i<LEVELS.length;i++)if(xp>=LEVELS[i])lv=i;
+  const cur=LEVELS[lv]||0,nxt=LEVELS[Math.min(lv+1,LEVELS.length-1)]||cur+1000;
+  const pct=nxt>cur?Math.min(100,Math.round((xp-cur)/(nxt-cur)*100)):100;
+  const tt=TITLES[Math.min(lv,TITLES.length-1)];
+  const setAll=(ids,val,prop='textContent')=>ids.forEach(id=>{const e=document.getElementById(id);if(e)e[prop]=val;});
+  setAll(['hlv','gm-lv'],lv+1);
+  setAll(['hxtitle','gm-tt'],'« '+tt+' »');
+  document.getElementById('hxbar').style.width=pct+'%';
+  document.getElementById('hxnum').textContent=xp.toLocaleString()+' / '+nxt.toLocaleString()+' XP';
+  const gf=document.getElementById('gm-fill');if(gf)gf.style.width=pct+'%';
+  const gx=document.getElementById('gm-xp');if(gx)gx.textContent=xp.toLocaleString()+' / '+nxt.toLocaleString()+' XP';
+  const gn=document.getElementById('gm-nm');if(gn)gn.textContent=db.user.name||'นักเดินทาง';
+  const gt=document.getElementById('gm-tt');if(gt)gt.textContent='« '+tt+' »';
 }
 
-function renderRecentList() {
-  const el = document.getElementById('recent-list');
-  const recent = [...db.checkins].sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1).slice(0,5);
-
-  if (!recent.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-ico">📍</div><div class="empty-title">ยังไม่มีการเช็คอิน</div><div class="empty-sub">กด + ด้านล่างเพื่อเริ่มบันทึก</div></div>';
-    return;
-  }
-
-  const TYPE_ICON = {attraction:'🏛️',food:'🍜',hotel:'🏨',cafe:'☕',temple:'⛩️',nature:'🌿',shopping:'🛍️',other:'📍'};
-  el.innerHTML = recent.map(ci => `
-    <div class="recent-card" onclick="openSub('sub-timeline')">
-      <div class="rc-icon">${TYPE_ICON[ci.type]||'📍'}</div>
-      <div class="rc-body">
-        <div class="rc-place">${ci.place}</div>
-        <div class="rc-meta">
-          <span class="rc-province">📍 ${ci.province}</span>
-          <span>${formatDateTH(ci.date)}</span>
-          ${ci.expense ? `<span>💰 ${ci.expense.toLocaleString()}฿</span>` : ''}
-        </div>
-        <div class="rc-stars">${'⭐'.repeat(ci.rating||5)}</div>
+function renderRecent(){
+  const el=document.getElementById('rec-list');
+  const items=[...db.checkins].sort((a,b)=>(b.date+b.time||'')>(a.date+a.time||'')?1:-1).slice(0,5);
+  if(!items.length){el.innerHTML='<div class="empty"><div class="ei">📍</div><div class="et">ยังไม่มีการเช็คอิน</div><div class="es">กด + เพื่อเริ่มบันทึก</div></div>';return;}
+  el.innerHTML=items.map(ci=>`
+    <div class="ri" onclick="openSide('sd-timeline')">
+      <div class="rii">${(typeMap[ci.type]||typeMap.other).e}</div>
+      <div style="flex:1;min-width:0">
+        <div class="rin">${esc(ci.place)}</div>
+        <div class="rim2c"><span class="rip">📍 ${esc(ci.province)}</span><span>${dateTH(ci.date)}</span>${ci.expense?`<span>💰 ${parseFloat(ci.expense).toLocaleString()}฿</span>`:''}</div>
+        <div style="font-size:11px;margin-top:2px">${'⭐'.repeat(Math.max(1,Math.min(5,ci.rating||5)))}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-function renderRegionProgress() {
-  const el = document.getElementById('region-list');
-  const visited = new Set(db.checkins.map(c => c.province));
-
-  el.innerHTML = Object.entries(REGIONS).map(([name, {icon, provs}]) => {
-    const done = provs.filter(p => visited.has(p)).length;
-    const pct = Math.round(done / provs.length * 100);
-    return `
-      <div class="region-row">
-        <div class="reg-icon">${icon}</div>
-        <div class="reg-info">
-          <div class="reg-name">${name}</div>
-          <div class="reg-bar-bg"><div class="reg-bar" style="width:${pct}%"></div></div>
-        </div>
-        <div class="reg-count">${done}/${provs.length}</div>
-      </div>
-    `;
+function renderRegions(){
+  const el=document.getElementById('reg-list');
+  const visited=new Set(db.checkins.map(c=>c.province));
+  el.innerHTML=Object.entries(REGIONS).map(([nm,{i}])=>{
+    const all=PV.filter(p=>p.r===nm);
+    const done=all.filter(p=>visited.has(p.n)).length;
+    const pct=all.length?Math.round(done/all.length*100):0;
+    return`<div class="rr"><div class="rri">${i}</div><div class="rrd"><div class="rrn">${nm}</div><div class="rrbg"><div class="rrfill" style="width:${pct}%"></div></div></div><div class="rrc">${done}/${all.length}</div></div>`;
   }).join('');
 }
 
-// ════════════════════════════════════════
-// CHECK-IN
-// ════════════════════════════════════════
-let currentRating = 5, currentType = 'attraction', currentWeather = 'sunny';
-
-function populateProvinceSelect() {
-  const sel = document.getElementById('ci-province');
-  sel.innerHTML = '<option value="">-- เลือกจังหวัด --</option>';
-  PROVINCES.forEach(p => sel.innerHTML += `<option value="${p.n}">${p.n} · ${p.r}</option>`);
+function renderMapPills(){
+  const visited=new Set(db.checkins.map(c=>c.province));
+  const totalExp=db.checkins.reduce((s,c)=>s+(parseFloat(c.expense)||0),0);
+  document.getElementById('mp-pv').textContent=visited.size;
+  document.getElementById('mp-ci').textContent=db.checkins.length;
+  document.getElementById('mp-tr').textContent=db.trips.length;
+  document.getElementById('mp-ex').textContent=totalExp.toLocaleString();
 }
 
-function populateTripSelect() {
-  const sel = document.getElementById('ci-trip');
-  sel.innerHTML = '<option value="">-- ไม่เพิ่มในทริป --</option>';
-  db.trips.forEach(t => sel.innerHTML += `<option value="${t.id}">${t.name}</option>`);
+// ══════════════════════════════════
+// MAP
+// ══════════════════════════════════
+let leafMap=null,mapMarkers=[];
+
+function initMap(){
+  if(leafMap)return;
+  leafMap=L.map('map',{zoomControl:false,attributionControl:false}).setView([13.1,101.0],6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd'}).addTo(leafMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',opacity:.6}).addTo(leafMap);
+  renderMapMarkers();
 }
 
-function searchPlaces(val) {
-  const drop = document.getElementById('ac-drop');
-  if (!val || val.length < 1) { drop.classList.remove('open'); return; }
-
-  const matches = PROVINCES.filter(p => p.n.includes(val) || val.includes(p.n.slice(0,2))).slice(0,5);
-  const items = [{ icon:'📍', main: val, sub: 'พิมพ์ชื่อนี้', val: val, province: '' }, ...matches.map(p => ({ icon:'🗺️', main: p.n, sub: p.r, val: p.n, province: p.n }))];
-
-  drop.classList.add('open');
-  drop.innerHTML = items.map(item => `
-    <div class="ac-item" onclick="pickPlace('${item.val}','${item.province}')">
-      <div class="ac-item-icon">${item.icon}</div>
-      <div>
-        <div class="ac-item-main">${item.main}</div>
-        <div class="ac-item-sub">${item.sub}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function pickPlace(val, province) {
-  document.getElementById('ci-place').value = val;
-  document.getElementById('ac-drop').classList.remove('open');
-  if (province) document.getElementById('ci-province').value = province;
-}
-
-function selectType(el) {
-  document.querySelectorAll('.type-chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  currentType = el.dataset.val;
-}
-
-function setRating(n) {
-  currentRating = n;
-  document.querySelectorAll('.star').forEach((s, i) => {
-    s.classList.toggle('on', i < n);
+function renderMapMarkers(){
+  if(!leafMap)return;
+  mapMarkers.forEach(m=>leafMap.removeLayer(m));
+  mapMarkers=[];
+  const grp={};
+  db.checkins.forEach(ci=>{
+    const p=pvMap[ci.province];if(!p)return;
+    if(!grp[ci.province])grp[ci.province]={p,items:[]};
+    grp[ci.province].items.push(ci);
+  });
+  Object.values(grp).forEach(({p,items})=>{
+    const cnt=items.length,sz=Math.min(28,10+cnt*2.5);
+    const ico=L.divIcon({className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],
+      html:`<div style="width:${sz}px;height:${sz}px;background:radial-gradient(circle at 35% 30%,#00dea0,#009e70);border:2px solid rgba(255,255,255,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${cnt>1?Math.max(8,sz*.35):0}px;font-weight:800;color:#0b1120;box-shadow:0 2px 14px rgba(0,222,160,.55)">${cnt>1?cnt:''}</div>`
+    });
+    const m=L.marker([p.lat,p.lng],{icon:ico}).addTo(leafMap);
+    const rows=items.slice(0,5).map(ci=>`<div style="font-size:12px;padding:4px 0;border-bottom:1px solid #e5e7eb;color:#374151;display:flex;align-items:center;gap:5px"><span>${(typeMap[ci.type]||typeMap.other).e}</span><span>${ci.place}</span><span style="color:#9ca3af;font-size:10px;margin-left:auto">${dateShort(ci.date)}</span></div>`).join('');
+    m.bindPopup(`<div style="font-family:'Noto Sans Thai',sans-serif;min-width:180px"><div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#111">📍 ${p.n}</div>${rows}${items.length>5?`<div style="font-size:11px;color:#9ca3af;padding-top:4px">+${items.length-5} อีก...</div>`:''}</div>`,{maxWidth:240});
+    mapMarkers.push(m);
   });
 }
 
-function selectWeather(el) {
-  document.querySelectorAll('.weather-chip').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  currentWeather = el.dataset.val;
+function mapReset(){leafMap&&leafMap.setView([13.1,101.0],6);}
+function mapMyLoc(){
+  if(!navigator.geolocation){toast('ไม่รองรับ GPS','err');return;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    leafMap&&leafMap.setView([pos.coords.latitude,pos.coords.longitude],13);
+    toast('📡 พบตำแหน่งของคุณ','ok');
+  },()=>toast('ไม่สามารถเข้าถึง GPS','err'),{timeout:8000});
 }
 
-function submitCheckin() {
-  const place = document.getElementById('ci-place').value.trim();
-  const province = document.getElementById('ci-province').value;
-  const date = document.getElementById('ci-date').value;
-  const time = document.getElementById('ci-time').value;
-  const note = document.getElementById('ci-note').value.trim();
-  const expense = parseFloat(document.getElementById('ci-expense').value) || 0;
-  const tripId = document.getElementById('ci-trip').value;
+function onGsearch(v){
+  if(!v||v.length<1)return;
+  const p=PV.find(x=>x.n.includes(v));
+  if(p&&leafMap){leafMap.setView([p.lat,p.lng],11);if(curPanel!=='map')navTo('map');}
+}
 
-  if (!place) { showToast('กรุณาใส่ชื่อสถานที่', 'error'); return; }
-  if (!province) { showToast('กรุณาเลือกจังหวัด', 'error'); return; }
-  if (!date) { showToast('กรุณาเลือกวันที่', 'error'); return; }
+// ══════════════════════════════════
+// CHECKIN FORM
+// ══════════════════════════════════
+let ciRating=5,ciType='attraction',ciWeather='sunny',ciPhotos=[];
 
-  const prov = PROVINCES.find(p => p.n === province);
-  const prevVisited = new Set(db.checkins.map(c => c.province));
-  const isNewProv = !prevVisited.has(province);
+function initCiForm(){
+  // Province select
+  const pSel=document.getElementById('ci-prov');
+  if(pSel.options.length<2){
+    PV.forEach(p=>{const o=document.createElement('option');o.value=p.n;o.textContent=p.n+' · '+p.r;pSel.appendChild(o);});
+  }
+  // Trip select
+  const tSel=document.getElementById('ci-trip');
+  tSel.innerHTML='<option value="">— ไม่ระบุ —</option>';
+  db.trips.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;tSel.appendChild(o);});
+  // Type grid
+  const tg=document.getElementById('type-grid');
+  if(!tg.children.length){
+    tg.innerHTML=TYPES.map(t=>`<div class="tb${t.v===ciType?' on':''}" data-v="${t.v}" onclick="setType(this)"><span>${t.e}</span>${t.l}</div>`).join('');
+  }
+  // Date/time
+  const now=new Date();
+  const dateEl=document.getElementById('ci-date');
+  const timeEl=document.getElementById('ci-time');
+  if(!dateEl.value)dateEl.value=now.toISOString().split('T')[0];
+  if(!timeEl.value)timeEl.value=now.toTimeString().slice(0,5);
+}
 
-  const ci = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
-    place, province, type: currentType, date, time, note,
-    expense, weather: currentWeather, rating: currentRating,
-    tripId: tripId || null,
-    lat: prov?.lat || 0, lng: prov?.lng || 0,
-    createdAt: new Date().toISOString()
+function onPlaceInput(v){
+  const ac=document.getElementById('ci-ac');
+  if(!v||v.length<1){ac.classList.remove('open');return;}
+  const pvMatches=PV.filter(p=>p.n.includes(v)).slice(0,4);
+  const items=[
+    {e:'📍',m:v,s:'บันทึกชื่อนี้',prov:''},
+    ...pvMatches.map(p=>({e:'🗺️',m:p.n,s:p.r,prov:p.n}))
+  ];
+  ac.classList.add('open');
+  ac.innerHTML=items.map((it,idx)=>`<div class="aci" onclick="pickPlace(${idx})"><div class="aci-e">${it.e}</div><div><div class="aci-m">${esc(it.m)}</div><div class="aci-s">${it.s}</div></div></div>`).join('');
+  ac._items=items;
+}
+
+function pickPlace(idx){
+  const ac=document.getElementById('ci-ac');
+  const it=ac._items[idx];
+  if(!it)return;
+  document.getElementById('ci-place').value=it.m;
+  ac.classList.remove('open');
+  if(it.prov){
+    document.getElementById('ci-prov').value=it.prov;
+    if(leafMap){const p=pvMap[it.prov];if(p)leafMap.setView([p.lat,p.lng],10);}
+  }
+}
+
+function setType(el){
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');ciType=el.dataset.v;
+}
+
+function setRating(n){
+  ciRating=n;
+  document.querySelectorAll('.star').forEach((s,i)=>s.classList.toggle('on',i<n));
+}
+
+function setWx(el){
+  document.querySelectorAll('.wb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');ciWeather=el.dataset.v;
+}
+
+function onCiPhoto(input){
+  const files=Array.from(input.files);
+  let loaded=0;
+  if(!files.length)return;
+  files.forEach(f=>{
+    if(f.size>5*1024*1024){toast('รูปขนาดใหญ่เกิน 5MB','err');loaded++;return;}
+    const reader=new FileReader();
+    reader.onload=e=>{
+      // Compress image
+      compressImg(e.target.result,800,0.75,data=>{
+        ciPhotos.push({data,name:f.name});
+        loaded++;
+        if(loaded===files.length)renderCiPhotoPreview();
+      });
+    };
+    reader.readAsDataURL(f);
+  });
+  input.value='';
+}
+
+function compressImg(src,maxW,quality,cb){
+  const img=new Image();
+  img.onload=()=>{
+    const canvas=document.createElement('canvas');
+    let w=img.width,h=img.height;
+    if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+    canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    cb(canvas.toDataURL('image/jpeg',quality));
+  };
+  img.onerror=()=>cb(src);
+  img.src=src;
+}
+
+function renderCiPhotoPreview(){
+  const el=document.getElementById('ci-photo-prev');
+  el.innerHTML=ciPhotos.map((ph,i)=>`
+    <div class="ph-thumb">
+      <img src="${ph.data}" alt="">
+      <div class="ph-del" onclick="ciPhotos.splice(${i},1);renderCiPhotoPreview()">✕</div>
+    </div>`).join('');
+}
+
+function submitCheckin(){
+  const place=document.getElementById('ci-place').value.trim();
+  const prov=document.getElementById('ci-prov').value;
+  const date=document.getElementById('ci-date').value;
+  const time=document.getElementById('ci-time').value;
+  const note=document.getElementById('ci-note').value.trim();
+  const exp=parseFloat(document.getElementById('ci-exp').value)||0;
+  const tripId=document.getElementById('ci-trip').value;
+
+  if(!place){toast('❗ กรุณาใส่ชื่อสถานที่','err');return;}
+  if(!prov){toast('❗ กรุณาเลือกจังหวัด','err');return;}
+  if(!date){toast('❗ กรุณาเลือกวันที่','err');return;}
+
+  const p=pvMap[prov];
+  const prevVisited=new Set(db.checkins.map(c=>c.province));
+  const isNewProv=!prevVisited.has(prov);
+
+  const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const ci={
+    id,place,province:prov,type:ciType,date,time,note,
+    expense:exp,weather:ciWeather,rating:ciRating,
+    tripId:tripId||null,
+    lat:p?.lat||0,lng:p?.lng||0,
+    photos:ciPhotos.map(x=>x.data),
+    createdAt:new Date().toISOString()
   };
 
   db.checkins.push(ci);
 
-  if (tripId) {
-    const trip = db.trips.find(t => t.id === tripId);
-    if (trip) { trip.checkinIds = trip.checkinIds || []; trip.checkinIds.push(ci.id); }
+  if(tripId){
+    const tr=db.trips.find(t=>t.id===tripId);
+    if(tr){tr.checkinIds=tr.checkinIds||[];tr.checkinIds.push(id);}
   }
 
-  // XP
-  db.xp = (db.xp||0) + 15;
-  if (isNewProv) { db.xp += 50; showToast(`🆕 จังหวัดใหม่! +65 XP`, 'success'); }
-  else { showToast(`✅ เช็คอิน "${place}" แล้ว! +15 XP`, 'success'); }
+  db.xp=(db.xp||0)+15;
+  if(isNewProv)db.xp+=50;
 
-  saveDB(db);
-  syncToGAS(ci, 'checkin');
-  renderMapMarkers();
-  refreshHome();
-  updateXPDisplay();
+  dbSave();
+  renderMapMarkers();renderHome();updateXP();
+  gasOne({action:'saveCheckin',data:{...ci,photos:ci.photos.length}});
 
-  // Reset form
-  document.getElementById('ci-place').value = '';
-  document.getElementById('ci-note').value = '';
-  document.getElementById('ci-expense').value = '';
-  document.getElementById('ac-drop').classList.remove('open');
+  if(isNewProv)toast(`🆕 จังหวัดใหม่! "${prov}" +65 XP 🎉`,'ok');
+  else toast(`✅ เช็คอิน "${place}" แล้ว! +15 XP`,'ok');
 
-  // Go home
-  setTimeout(() => showPanel('home'), 600);
+  resetCi();
+  setTimeout(()=>navTo('home'),400);
 }
 
-// ════════════════════════════════════════
+function resetCi(){
+  document.getElementById('ci-place').value='';
+  document.getElementById('ci-prov').value='';
+  document.getElementById('ci-note').value='';
+  document.getElementById('ci-exp').value='';
+  document.getElementById('ci-trip').value='';
+  document.getElementById('ci-ac').classList.remove('open');
+  ciPhotos=[];renderCiPhotoPreview();
+  ciRating=5;
+  document.querySelectorAll('.star').forEach(s=>s.classList.add('on'));
+  ciType='attraction';
+  document.querySelectorAll('.tb').forEach(b=>b.classList.toggle('on',b.dataset.v==='attraction'));
+  ciWeather='sunny';
+  document.querySelectorAll('.wb').forEach(b=>b.classList.toggle('on',b.dataset.v==='sunny'));
+}
+
+// ══════════════════════════════════
 // TRIPS
-// ════════════════════════════════════════
-function createTrip() {
-  const name = document.getElementById('t-name').value.trim();
-  const start = document.getElementById('t-start').value;
-  const end = document.getElementById('t-end').value;
-  const note = document.getElementById('t-note').value.trim();
-
-  if (!name) { showToast('กรุณาใส่ชื่อทริป','error'); return; }
-  if (!start) { showToast('กรุณาเลือกวันเริ่มต้น','error'); return; }
-
-  const trip = { id: Date.now().toString(36), name, start, end, note, checkinIds: [], createdAt: new Date().toISOString() };
-  db.trips.push(trip);
-  saveDB(db);
-  closeSheet('sheet-new-trip');
-  renderTrips();
-  refreshHome();
-  showToast(`🚗 สร้างทริป "${name}" แล้ว!`, 'success');
+// ══════════════════════════════════
+function createTrip(){
+  const name=document.getElementById('t-name').value.trim();
+  const start=document.getElementById('t-start').value;
+  const end=document.getElementById('t-end').value;
+  const note=document.getElementById('t-note').value.trim();
+  if(!name){toast('❗ กรุณาใส่ชื่อทริป','err');return;}
+  if(!start){toast('❗ กรุณาเลือกวันเริ่มต้น','err');return;}
+  if(end&&end<start){toast('❗ วันสิ้นสุดต้องหลังวันเริ่มต้น','err');return;}
+  const trip={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,start,end,note,checkinIds:[],photos:[],createdAt:new Date().toISOString()};
+  db.trips.push(trip);dbSave();
+  closeSheet('sh-newtrip');
+  ['t-name','t-start','t-end','t-note'].forEach(id=>{document.getElementById(id).value='';});
+  renderTrips();renderHome();
+  toast(`🚗 สร้างทริป "${name}" แล้ว!`,'ok');
 }
 
-function renderTrips() {
-  const el = document.getElementById('trips-list');
-  if (!db.trips.length) {
-    el.innerHTML = '<div class="empty"><div class="empty-ico">🗺️</div><div class="empty-title">ยังไม่มีทริป</div><div class="empty-sub">สร้างทริปเพื่อรวบรวมสถานที่ในการเดินทาง</div></div>';
-    return;
-  }
-  const sorted = [...db.trips].sort((a,b) => (b.start||'') > (a.start||'') ? 1 : -1);
-  el.innerHTML = sorted.map(trip => {
-    const checkins = db.checkins.filter(c => c.tripId === trip.id);
-    const provinces = new Set(checkins.map(c => c.province));
-    const days = trip.end ? Math.max(1, Math.ceil((new Date(trip.end)-new Date(trip.start))/86400000)+1) : 1;
-    const totalExp = checkins.reduce((s,c) => s+(c.expense||0), 0);
-
-    return `
-      <div class="trip-card">
-        <div class="tc-header">
-          <div class="tc-icon">🗺️</div>
-          <div style="flex:1">
-            <div class="tc-name">${trip.name}</div>
-            <div class="tc-dates">📅 ${formatDateTH(trip.start)}${trip.end ? ' – '+formatDateTH(trip.end) : ''}</div>
-          </div>
-          <div class="tc-del" onclick="event.stopPropagation();deleteTrip('${trip.id}')">🗑️</div>
+function renderTrips(){
+  const el=document.getElementById('trips-body');
+  if(!db.trips.length){el.innerHTML='<div class="empty"><div class="ei">🗺️</div><div class="et">ยังไม่มีทริป</div><div class="es">กด "+ ทริปใหม่" เพื่อเริ่ม</div></div>';return;}
+  const sorted=[...db.trips].sort((a,b)=>(b.start||'')>(a.start||'')?1:-1);
+  el.innerHTML=sorted.map(trip=>{
+    const cis=db.checkins.filter(c=>c.tripId===trip.id);
+    const provs=new Set(cis.map(c=>c.province));
+    const days=trip.end&&trip.start?Math.max(1,Math.round((new Date(trip.end)-new Date(trip.start))/86400000)+1):1;
+    const totalExp=cis.reduce((s,c)=>s+(parseFloat(c.expense)||0),0);
+    const allPh=[...(trip.photos||[]),...cis.flatMap(c=>c.photos||[])];
+    const phHtml=allPh.length
+      ?allPh.slice(0,8).map((ph,i)=>`<div class="tcpht" onclick="event.stopPropagation();openPV('${encodeURIComponent(ph)}','${esc(trip.name)}')">${i<8?`<img src="${ph}" alt="">`:`<div class="tcphmore">+${allPh.length-7}</div>`}</div>`).join('')
+      :`<div class="tcphnone">ยังไม่มีรูป · กด "+ เพิ่มรูป"</div>`;
+    return`
+    <div class="trpcard">
+      <div class="tct">
+        <div class="tci">🗺️</div>
+        <div style="flex:1;min-width:0">
+          <div class="tcn">${esc(trip.name)}</div>
+          <div class="tcd">📅 ${dateTH(trip.start)}${trip.end?' – '+dateTH(trip.end):''}</div>
         </div>
-        <div class="tc-badges">
-          <span class="tc-badge tcb-days">⏰ ${days} วัน</span>
-          <span class="tc-badge tcb-ci">📍 ${checkins.length} จุด</span>
-          <span class="tc-badge tcb-prov">🗺️ ${provinces.size} จังหวัด</span>
-          ${totalExp ? `<span class="tc-badge tcb-exp">💰 ${totalExp.toLocaleString()}฿</span>` : ''}
-        </div>
-        ${checkins.length ? `
-          <div class="tc-places">
-            <div class="tc-places-title">สถานที่</div>
-            <div class="tc-places-list">
-              ${checkins.slice(0,6).map(c=>`<span class="tc-place-tag">📍 ${c.place}</span>`).join('')}
-              ${checkins.length>6 ? `<span class="tc-place-tag">+${checkins.length-6} อีก</span>` : ''}
-            </div>
-          </div>` : ''}
+        <div class="tcdel" onclick="event.stopPropagation();deleteTrip('${trip.id}')">🗑️</div>
       </div>
-    `;
+      <div class="tcchips">
+        <span class="chip cb">⏰ ${days} วัน</span>
+        <span class="chip cv">📍 ${cis.length} จุด</span>
+        <span class="chip cg">🗺️ ${provs.size} จังหวัด</span>
+        ${totalExp?`<span class="chip ca">💰 ${totalExp.toLocaleString()}฿</span>`:''}
+      </div>
+      ${cis.length?`<div class="tcpl"><div class="tcplt">สถานที่ในทริป</div><div class="tcpll">${cis.slice(0,8).map(c=>`<span class="tcpltag">${(typeMap[c.type]||typeMap.other).e} ${esc(c.place)}</span>`).join('')}${cis.length>8?`<span class="tcpltag">+${cis.length-8}</span>`:''}</div></div>`:''}
+      <div class="tcphs">
+        <div class="tcphsh"><span>📸 รูปภาพ (${allPh.length})</span><span class="tcphadd" onclick="event.stopPropagation();document.getElementById('tph-${trip.id}').click()">+ เพิ่มรูป</span></div>
+        <div class="tcphg" id="tcphg-${trip.id}">${phHtml}</div>
+        <input type="file" id="tph-${trip.id}" accept="image/*" multiple style="display:none" onchange="onTripPhoto(this,'${trip.id}')">
+      </div>
+    </div>`;
   }).join('');
 }
 
-function deleteTrip(id) {
-  if (!confirm('ลบทริปนี้?')) return;
-  db.trips = db.trips.filter(t => t.id !== id);
-  db.checkins.forEach(c => { if (c.tripId === id) c.tripId = null; });
-  saveDB(db);
-  renderTrips();
-  showToast('ลบทริปแล้ว', 'success');
+function deleteTrip(id){
+  if(!confirm('ลบทริปนี้?'))return;
+  db.trips=db.trips.filter(t=>t.id!==id);
+  db.checkins.forEach(c=>{if(c.tripId===id)c.tripId=null;});
+  dbSave();renderTrips();renderHome();toast('ลบทริปแล้ว','ok');
 }
 
-// ════════════════════════════════════════
-// TIMELINE
-// ════════════════════════════════════════
-function renderTimeline() {
-  const body = document.getElementById('tl-body');
-  const search = (document.getElementById('tl-search')?.value || '').toLowerCase();
-  const filter = document.getElementById('tl-filter')?.value || '';
-
-  const TYPE_ICON = {attraction:'🏛️',food:'🍜',hotel:'🏨',cafe:'☕',temple:'⛩️',nature:'🌿',shopping:'🛍️',other:'📍'};
-  const TYPE_LABEL = {attraction:'ท่องเที่ยว',food:'อาหาร',hotel:'ที่พัก',cafe:'คาเฟ่',temple:'วัด',nature:'ธรรมชาติ',shopping:'ช้อปปิ้ง',other:'อื่นๆ'};
-
-  let items = [...db.checkins]
-    .filter(c => (!search || c.place.toLowerCase().includes(search) || c.province.toLowerCase().includes(search)) && (!filter || c.type === filter))
-    .sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
-
-  if (!items.length) {
-    body.innerHTML = '<div class="empty"><div class="empty-ico">📅</div><div class="empty-title">ไม่พบข้อมูล</div></div>';
-    return;
-  }
-
-  let lastYear = '', html = '';
-  items.forEach((ci, idx) => {
-    const year = (ci.date||'').slice(0,4);
-    if (year && year !== lastYear) {
-      if (lastYear) html += `</div>`;
-      html += `<div class="tl-year-label">${parseInt(year)+543}</div><div>`;
-      lastYear = year;
-    }
-    html += `
-      <div class="tl-item">
-        <div class="tl-spine">
-          <div class="tl-dot"></div>
-          ${idx < items.length-1 ? '<div class="tl-line"></div>' : ''}
-        </div>
-        <div class="tl-card">
-          <div class="tl-card-top">
-            <div class="tl-card-place">${TYPE_ICON[ci.type]||'📍'} ${ci.place}</div>
-            <div class="tl-card-date">${formatDateShort(ci.date)}</div>
-          </div>
-          <div class="tl-card-prov">📍 ${ci.province}${ci.time ? ' · '+ci.time+' น.' : ''}</div>
-          ${ci.note ? `<div class="tl-card-note">"${ci.note}"</div>` : ''}
-          <div class="tl-card-footer">
-            <span class="tl-tag">${TYPE_LABEL[ci.type]||'อื่นๆ'}</span>
-            <span class="tl-tag">${'⭐'.repeat(ci.rating||5)}</span>
-            ${ci.expense ? `<span class="tl-tag">💰${ci.expense.toLocaleString()}฿</span>` : ''}
-          </div>
-        </div>
-      </div>`;
-  });
-  if (lastYear) html += '</div>';
-  body.innerHTML = html;
-}
-
-// ════════════════════════════════════════
-// ANALYTICS
-// ════════════════════════════════════════
-let charts = {};
-
-function renderAnalytics() {
-  const visited = new Set(db.checkins.map(c => c.province));
-  const totalExp = db.checkins.reduce((s,c)=>s+(c.expense||0),0);
-
-  document.getElementById('an-prov').textContent = visited.size;
-  document.getElementById('an-ci').textContent = db.checkins.length;
-  document.getElementById('an-exp').textContent = totalExp > 9999 ? Math.round(totalExp/1000)+'K' : totalExp.toLocaleString();
-  document.getElementById('an-trips').textContent = db.trips.length;
-
-  drawMonthlyChart();
-  drawTypesChart();
-  drawExpenseChart();
-  drawHeatmap();
-}
-
-const CDEFS = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ticks:{color:'#4a5a74',font:{family:'Noto Sans Thai',size:11}},grid:{color:'rgba(255,255,255,0.05)'}}, y:{ticks:{color:'#4a5a74',font:{family:'Noto Sans Thai',size:10}},grid:{color:'rgba(255,255,255,0.05)'}} } };
-
-function drawMonthlyChart() {
-  const ctx = document.getElementById('chart-monthly')?.getContext('2d');
-  if (!ctx) return;
-  const yr = new Date().getFullYear();
-  const counts = new Array(12).fill(0);
-  db.checkins.forEach(c => { if (!c.date) return; const [y,m]=c.date.split('-'); if(parseInt(y)===yr) counts[parseInt(m)-1]++; });
-  if (charts.monthly) charts.monthly.destroy();
-  charts.monthly = new Chart(ctx, { type:'bar', data:{ labels:['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'], datasets:[{data:counts,backgroundColor:'rgba(0,229,160,0.5)',borderColor:'#00e5a0',borderWidth:1.5,borderRadius:4}] }, options:{ ...CDEFS } });
-}
-
-function drawTypesChart() {
-  const ctx = document.getElementById('chart-types')?.getContext('2d');
-  if (!ctx) return;
-  const LABELS = {attraction:'ท่องเที่ยว',food:'อาหาร',hotel:'ที่พัก',cafe:'คาเฟ่',temple:'วัด',nature:'ธรรมชาติ',shopping:'ช้อปปิ้ง',other:'อื่นๆ'};
-  const counts = {};
-  db.checkins.forEach(c => { counts[c.type]=(counts[c.type]||0)+1; });
-  const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-  if (charts.types) charts.types.destroy();
-  charts.types = new Chart(ctx, { type:'doughnut', data:{ labels:entries.map(([k])=>LABELS[k]||k), datasets:[{data:entries.map(([,v])=>v),backgroundColor:['#00e5a0','#38bdf8','#f0883e','#a78bfa','#e3b341','#39d353','#f85149','#8b949e'],borderWidth:0}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true,position:'right',labels:{color:'#8899b4',font:{family:'Noto Sans Thai',size:11},padding:8,boxWidth:12}}} } });
-}
-
-function drawExpenseChart() {
-  const ctx = document.getElementById('chart-expense')?.getContext('2d');
-  if (!ctx) return;
-  const yr = new Date().getFullYear();
-  const totals = new Array(12).fill(0);
-  db.checkins.forEach(c => { if(!c.date||!c.expense) return; const [y,m]=c.date.split('-'); if(parseInt(y)===yr) totals[parseInt(m)-1]+=c.expense; });
-  if (charts.expense) charts.expense.destroy();
-  charts.expense = new Chart(ctx, { type:'line', data:{ labels:['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'], datasets:[{data:totals,borderColor:'#ffb830',backgroundColor:'rgba(255,184,48,0.1)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#ffb830'}] }, options:{...CDEFS} });
-}
-
-function drawHeatmap() {
-  const el = document.getElementById('heatmap-grid');
-  if (!el) return;
-  const countMap = {};
-  db.checkins.forEach(c => { if(c.date) countMap[c.date]=(countMap[c.date]||0)+1; });
-
-  let cur = new Date(); cur.setDate(cur.getDate() - 363);
-  const dow = cur.getDay(); cur.setDate(cur.getDate() - (dow===0?6:dow-1));
-
-  const cols = [];
-  for (let w = 0; w < 53; w++) {
-    const cells = [];
-    for (let d = 0; d < 7; d++) {
-      const ds = cur.toISOString().split('T')[0];
-      const cnt = countMap[ds]||0;
-      const lv = cnt>=4?'l4':cnt>=3?'l3':cnt>=2?'l2':cnt>=1?'l1':'';
-      cells.push(`<div class="hm-cell ${lv}" title="${ds}: ${cnt}"></div>`);
-      cur.setDate(cur.getDate()+1);
-    }
-    cols.push(`<div class="hm-col">${cells.join('')}</div>`);
-  }
-  el.innerHTML = `<div class="hm-grid">${cols.join('')}</div>`;
-}
-
-// ════════════════════════════════════════
-// GAMIFICATION
-// ════════════════════════════════════════
-const MISSIONS = [
-  {id:'first',name:'ก้าวแรก',desc:'เช็คอินครั้งแรก',icon:'👶',rarity:'common',target:1,get:()=>db.checkins.length},
-  {id:'ci10',name:'นักสำรวจ',desc:'เช็คอิน 10 ครั้ง',icon:'🎒',rarity:'common',target:10,get:()=>db.checkins.length},
-  {id:'ci50',name:'นักสำรวจจอมโปรย',desc:'เช็คอิน 50 ครั้ง',icon:'🔥',rarity:'rare',target:50,get:()=>db.checkins.length},
-  {id:'prov10',name:'นักเดินทาง',desc:'ไปเยือน 10 จังหวัด',icon:'🗺️',rarity:'rare',target:10,get:()=>new Set(db.checkins.map(c=>c.province)).size},
-  {id:'prov30',name:'ซีพรลงเท้า',desc:'ไปเยือน 30 จังหวัด',icon:'🦶',rarity:'epic',target:30,get:()=>new Set(db.checkins.map(c=>c.province)).size},
-  {id:'prov77',name:'เจ้าของแผ่นดิน',desc:'ไปครบ 77 จังหวัด',icon:'🇹🇭',rarity:'legendary',target:77,get:()=>new Set(db.checkins.map(c=>c.province)).size},
-  {id:'south',name:'ราชาภาคใต้',desc:'ครบ 14 จังหวัดใต้',icon:'🌊',rarity:'epic',target:14,get:()=>Object.values(REGIONS['ภาคใต้'].provs).filter(p=>db.checkins.some(c=>c.province===p)).length},
-  {id:'north',name:'ราชาภาคเหนือ',desc:'ครบ 15 จังหวัดเหนือ',icon:'⛰️',rarity:'epic',target:15,get:()=>Object.values(REGIONS['ภาคเหนือ'].provs).filter(p=>db.checkins.some(c=>c.province===p)).length},
-  {id:'isan',name:'ราชาอีสาน',desc:'ครบ 20 จังหวัดอีสาน',icon:'🌾',rarity:'epic',target:20,get:()=>Object.values(REGIONS['ภาคอีสาน'].provs).filter(p=>db.checkins.some(c=>c.province===p)).length},
-  {id:'trip5',name:'นักจัดทริป',desc:'สร้าง 5 ทริป',icon:'✈️',rarity:'common',target:5,get:()=>db.trips.length},
-  {id:'temple10',name:'แสวงบุญ',desc:'เช็คอินวัด 10 แห่ง',icon:'⛩️',rarity:'rare',target:10,get:()=>db.checkins.filter(c=>c.type==='temple').length},
-  {id:'food20',name:'นักชิม',desc:'เช็คอินร้านอาหาร 20 ร้าน',icon:'🍜',rarity:'rare',target:20,get:()=>db.checkins.filter(c=>c.type==='food').length},
-];
-
-function renderGame() {
-  updateXPDisplay();
-  const grid = document.getElementById('mission-grid');
-  const RARITY_CLS = {common:'mr-common',rare:'mr-rare',epic:'mr-epic',legendary:'mr-legendary'};
-  const RARITY_TXT = {common:'Common',rare:'Rare',epic:'Epic',legendary:'Legendary'};
-
-  grid.innerHTML = MISSIONS.map(m => {
-    const prog = m.get();
-    const done = prog >= m.target;
-    const pct = Math.min(100, Math.round(prog/m.target*100));
-    return `
-      <div class="m-card ${done?'done':''}">
-        ${done ? '<div class="m-done-check">✓</div>' : ''}
-        <div class="m-rarity ${RARITY_CLS[m.rarity]}">${RARITY_TXT[m.rarity]}</div>
-        <div class="m-icon">${m.icon}</div>
-        <div class="m-name">${m.name}</div>
-        <div class="m-desc">${m.desc}</div>
-        <div class="m-bar-bg"><div class="m-bar" style="width:${pct}%"></div></div>
-        <div class="m-prog">${prog}/${m.target}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ════════════════════════════════════════
-// PHOTO BOOK
-// ════════════════════════════════════════
-function renderPhotos() {
-  const grid = document.getElementById('pb-grid');
-  const filter = document.getElementById('pb-filter')?.value || '';
-
-  // Populate filter
-  const sel = document.getElementById('pb-filter');
-  if (sel) {
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">ทุกทริป</option>';
-    db.trips.forEach(t => sel.innerHTML += `<option value="${t.id}">${t.name}</option>`);
-    sel.value = cur;
-  }
-
-  const TYPE_ICON = {attraction:'🏛️',food:'🍜',hotel:'🏨',cafe:'☕',temple:'⛩️',nature:'🌿',shopping:'🛍️',other:'📍'};
-  const PROV_COLOR = {'ภาคเหนือ':'#1a6b3a','ภาคใต้':'#0f5e4a','ภาคกลาง':'#1a3a7a','ภาคตะวันออก':'#6b3a10','ภาคอีสาน':'#5a1a6a','ภาคตะวันตก':'#6a2a1a'};
-  const provMap = Object.fromEntries(PROVINCES.map(p => [p.n, p.r]));
-
-  let items = db.checkins.filter(c => !filter || c.tripId === filter)
-    .sort((a,b) => (b.date||'') > (a.date||'') ? 1 : -1);
-
-  if (!items.length) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1;"><div class="empty-ico">📸</div><div class="empty-title">ยังไม่มีสถานที่</div></div>';
-    return;
-  }
-
-  grid.innerHTML = items.map(ci => {
-    const reg = provMap[ci.province] || 'ภาคกลาง';
-    const bg = PROV_COLOR[reg] || '#1a3a7a';
-    return `
-      <div class="pb-item" style="background:${bg}30;" title="${ci.place} · ${ci.province}">
-        <div class="pb-icon">${TYPE_ICON[ci.type]||'📍'}</div>
-        <div class="pb-name">${ci.place}</div>
-        <div class="pb-overlay"></div>
-        <div class="pb-caption">${ci.province}</div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ════════════════════════════════════════
-// GAS BACKEND SYNC
-// ════════════════════════════════════════
-async function gasRequest(method, params) {
-  const url = db.user.gasUrl;
-  if (!url) return null;
-
-  const uid = db.user.userId || 'default';
-
-  try {
-    let res;
-    if (method === 'GET') {
-      const qs = new URLSearchParams({ ...params, userId: uid }).toString();
-      res = await fetch(`${url}?${qs}`);
-    } else {
-      res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ ...params, userId: uid })
-      });
-    }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
-  } catch(e) {
-    console.warn('GAS request failed:', e.message);
-    return null;
-  }
-}
-
-async function syncWithGAS() {
-  if (!db.user.gasUrl) { showToast('กรุณาตั้งค่า Google Apps Script URL ก่อน', 'info'); openGASSetup(); return; }
-
-  showSyncBar('กำลัง sync ข้อมูล...');
-  document.getElementById('sync-btn').classList.add('syncing');
-
-  try {
-    const result = await gasRequest('POST', {
-      action: 'saveAll',
-      data: { checkins: db.checkins, trips: db.trips, user: db.user }
+function onTripPhoto(input,tripId){
+  const trip=db.trips.find(t=>t.id===tripId);if(!trip)return;
+  trip.photos=trip.photos||[];
+  Array.from(input.files).forEach(f=>{
+    compressImg(URL.createObjectURL(f),1024,0.8,data=>{
+      trip.photos.push(data);dbSave();
+      renderTrips();
     });
+  });
+  input.value='';
+  toast('📸 เพิ่มรูปแล้ว!','ok');
+}
 
-    if (result?.success) {
-      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
-      document.getElementById('si-sync-sub').textContent = 'ซิงค์ล่าสุด: เมื่อกี้';
-      showToast('✅ Sync สำเร็จ!', 'success');
-    } else {
-      showToast('❌ Sync ล้มเหลว', 'error');
+// ══════════════════════════════════
+// TIMELINE
+// ══════════════════════════════════
+const WTXT={sunny:'☀️',cloudy:'⛅',rainy:'🌧️',cool:'🌤️',hot:'🌡️'};
+const TLBL={attraction:'ท่องเที่ยว',food:'อาหาร',hotel:'ที่พัก',cafe:'คาเฟ่',temple:'วัด',nature:'ธรรมชาติ',shopping:'ช้อปปิ้ง',other:'อื่นๆ'};
+
+function renderTL(){
+  const body=document.getElementById('tlbody');
+  const q=(document.getElementById('tl-q')?.value||'').toLowerCase();
+  const f=document.getElementById('tl-f')?.value||'';
+  let items=[...db.checkins]
+    .filter(c=>(!q||(c.place+c.province+(c.note||'')).toLowerCase().includes(q))&&(!f||c.type===f))
+    .sort((a,b)=>(b.date+b.time||'')>(a.date+a.time||'')?1:-1);
+  if(!items.length){body.innerHTML='<div class="empty"><div class="ei">📅</div><div class="et">ไม่พบข้อมูล</div></div>';return;}
+  let html='',lastY='';
+  items.forEach((ci,idx)=>{
+    const y=(ci.date||'').slice(0,4);
+    if(y&&y!==lastY){html+=`<div class="tlyr">${parseInt(y)+543}</div>`;lastY=y;}
+    const phRow=(ci.photos||[]).length?`<div class="tlphotos">${(ci.photos||[]).slice(0,4).map(ph=>`<div class="tlph" onclick="openPV('${encodeURIComponent(ph)}','${esc(ci.place)}')"><img src="${ph}" alt="" loading="lazy"></div>`).join('')}</div>`:'';
+    html+=`<div class="tli">
+      <div class="tls"><div class="tld"></div>${idx<items.length-1?'<div class="tll"></div>':''}</div>
+      <div class="tlcard">
+        <div class="tlr1">
+          <div class="tlplace">${(typeMap[ci.type]||typeMap.other).e} ${esc(ci.place)}</div>
+          <div class="tldate">${dateShort(ci.date)}</div>
+          <div class="tldelbtn" onclick="deleteCi('${ci.id}')">🗑</div>
+        </div>
+        <div class="tlprov">📍 ${esc(ci.province)}${ci.time?' · '+ci.time+' น.':''}</div>
+        ${ci.note?`<div class="tlnote">"${esc(ci.note)}"</div>`:''}
+        <div class="tltags">
+          <span class="tltag">${TLBL[ci.type]||'อื่นๆ'}</span>
+          <span class="tltag">${'⭐'.repeat(Math.max(1,Math.min(5,ci.rating||5)))}</span>
+          ${ci.expense?`<span class="tltag">💰${parseFloat(ci.expense).toLocaleString()}฿</span>`:''}
+          ${ci.weather&&WTXT[ci.weather]?`<span class="tltag">${WTXT[ci.weather]}</span>`:''}
+        </div>
+        ${phRow}
+      </div>
+    </div>`;
+  });
+  body.innerHTML=html;
+}
+
+function deleteCi(id){
+  if(!confirm('ลบเช็คอินนี้?'))return;
+  db.checkins=db.checkins.filter(c=>c.id!==id);
+  dbSave();renderTL();renderHome();renderMapMarkers();
+  toast('ลบแล้ว','ok');
+}
+
+// ══════════════════════════════════
+// ANALYTICS
+// ══════════════════════════════════
+let CHS={};
+const CD={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+  scales:{x:{ticks:{color:'#4d607a',font:{family:'Noto Sans Thai',size:10}},grid:{color:'rgba(255,255,255,0.04)'}},
+          y:{ticks:{color:'#4d607a',font:{family:'Noto Sans Thai',size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}};
+
+function renderAnalytics(){
+  const visited=new Set(db.checkins.map(c=>c.province));
+  const totalExp=db.checkins.reduce((s,c)=>s+(parseFloat(c.expense)||0),0);
+  document.getElementById('an-pv').textContent=visited.size;
+  document.getElementById('an-ci').textContent=db.checkins.length;
+  document.getElementById('an-ex').textContent=totalExp>=10000?Math.round(totalExp/1000)+'K':totalExp.toLocaleString();
+  document.getElementById('an-tr').textContent=db.trips.length;
+  drawCh();
+}
+
+function drawCh(){
+  const yr=new Date().getFullYear();
+  const mo=new Array(12).fill(0);
+  const me=new Array(12).fill(0);
+  const tc={};
+  db.checkins.forEach(c=>{
+    if(c.date){const[y,m]=c.date.split('-');if(+y===yr){mo[+m-1]++;me[+m-1]+=(parseFloat(c.expense)||0);}}
+    tc[c.type]=(tc[c.type]||0)+1;
+  });
+  const LBL=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+
+  // Monthly
+  const c1=document.getElementById('ch-m')?.getContext('2d');
+  if(c1){if(CHS.m)CHS.m.destroy();CHS.m=new Chart(c1,{type:'bar',data:{labels:LBL,datasets:[{data:mo,backgroundColor:'rgba(0,222,160,.45)',borderColor:'#00dea0',borderWidth:1.5,borderRadius:5}]},options:{...CD}});}
+
+  // Types
+  const entries=Object.entries(tc).sort((a,b)=>b[1]-a[1]);
+  const c2=document.getElementById('ch-t')?.getContext('2d');
+  if(c2){if(CHS.t)CHS.t.destroy();CHS.t=new Chart(c2,{type:'doughnut',data:{labels:entries.map(([k])=>(typeMap[k]||typeMap.other).l),datasets:[{data:entries.map(([,v])=>v),backgroundColor:['#00dea0','#38c4f5','#f0883e','#a78bfa','#ffb830','#39d353','#f85149','#8898b2'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{color:'#8898b2',font:{family:'Noto Sans Thai',size:10},padding:7,boxWidth:10}}}}});}
+
+  // Expense
+  const c3=document.getElementById('ch-e')?.getContext('2d');
+  if(c3){if(CHS.e)CHS.e.destroy();CHS.e=new Chart(c3,{type:'line',data:{labels:LBL,datasets:[{data:me,borderColor:'#ffb830',backgroundColor:'rgba(255,184,48,.1)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#ffb830'}]},options:{...CD}});}
+
+  // Heatmap
+  const hmEl=document.getElementById('hmg');
+  if(hmEl){
+    const cmap={};db.checkins.forEach(c=>{if(c.date)cmap[c.date]=(cmap[c.date]||0)+1;});
+    let cur=new Date();cur.setDate(cur.getDate()-363);
+    const dow=cur.getDay();cur.setDate(cur.getDate()-(dow===0?6:dow-1));
+    const cols=[];
+    for(let w=0;w<53;w++){
+      const cells=[];
+      for(let d=0;d<7;d++){
+        const ds=cur.toISOString().split('T')[0];
+        const n=cmap[ds]||0;
+        const l=n>=4?'l4':n>=3?'l3':n>=2?'l2':n>=1?'l1':'';
+        cells.push(`<div class="hmcell${l?' '+l:''}" title="${ds}: ${n}"></div>`);
+        cur.setDate(cur.getDate()+1);
+      }
+      cols.push(`<div class="hmc">${cells.join('')}</div>`);
     }
-  } catch(e) {
-    showToast('❌ เชื่อมต่อไม่ได้', 'error');
+    hmEl.innerHTML=`<div class="hmg">${cols.join('')}</div>`;
   }
+}
 
+// ══════════════════════════════════
+// GAMIFICATION
+// ══════════════════════════════════
+const MISSIONS=[
+  {id:'ci1',n:'ก้าวแรก',d:'เช็คอินครั้งแรก',e:'👶',r:'common',t:1,g:()=>db.checkins.length},
+  {id:'ci10',n:'นักสำรวจ',d:'เช็คอิน 10 ครั้ง',e:'🎒',r:'common',t:10,g:()=>db.checkins.length},
+  {id:'ci50',n:'จอมสำรวจ',d:'เช็คอิน 50 ครั้ง',e:'🔥',r:'rare',t:50,g:()=>db.checkins.length},
+  {id:'ci100',n:'ราชาเช็คอิน',d:'เช็คอิน 100 ครั้ง',e:'👑',r:'epic',t:100,g:()=>db.checkins.length},
+  {id:'pv10',n:'นักเดินทาง',d:'ไปเยือน 10 จังหวัด',e:'🗺️',r:'rare',t:10,g:()=>new Set(db.checkins.map(c=>c.province)).size},
+  {id:'pv30',n:'ซีพรลงเท้า',d:'ไปเยือน 30 จังหวัด',e:'🦶',r:'epic',t:30,g:()=>new Set(db.checkins.map(c=>c.province)).size},
+  {id:'pv77',n:'เจ้าของแผ่นดิน',d:'ครบทุก 77 จังหวัด!',e:'🇹🇭',r:'legendary',t:77,g:()=>new Set(db.checkins.map(c=>c.province)).size},
+  {id:'south',n:'ราชาภาคใต้',d:'ครบ 14 จังหวัดใต้',e:'🌊',r:'epic',t:14,g:()=>PV.filter(p=>p.r==='ภาคใต้'&&db.checkins.some(c=>c.province===p.n)).length},
+  {id:'north',n:'ราชาภาคเหนือ',d:'ครบ 17 จังหวัดเหนือ',e:'⛰️',r:'epic',t:17,g:()=>PV.filter(p=>p.r==='ภาคเหนือ'&&db.checkins.some(c=>c.province===p.n)).length},
+  {id:'isan',n:'ราชาอีสาน',d:'ครบ 20 จังหวัดอีสาน',e:'🌾',r:'epic',t:20,g:()=>PV.filter(p=>p.r==='ภาคอีสาน'&&db.checkins.some(c=>c.province===p.n)).length},
+  {id:'tr5',n:'นักจัดทริป',d:'สร้าง 5 ทริป',e:'✈️',r:'common',t:5,g:()=>db.trips.length},
+  {id:'temple10',n:'แสวงบุญ',d:'เช็คอินวัด 10 แห่ง',e:'⛩️',r:'rare',t:10,g:()=>db.checkins.filter(c=>c.type==='temple').length},
+  {id:'food20',n:'นักชิม',d:'เช็คอินอาหาร 20 ครั้ง',e:'🍜',r:'rare',t:20,g:()=>db.checkins.filter(c=>c.type==='food').length},
+  {id:'night5',n:'มนุษย์กลางคืน',d:'เช็คอินหลัง 21:00 5 ครั้ง',e:'🌙',r:'common',t:5,g:()=>db.checkins.filter(c=>c.time&&+c.time.split(':')[0]>=21).length},
+  {id:'photo20',n:'ช่างภาพ',d:'อัปโหลดรูป 20 รูป',e:'📸',r:'rare',t:20,g:()=>db.checkins.reduce((s,c)=>s+(c.photos||[]).length,0)+db.trips.reduce((s,t)=>s+(t.photos||[]).length,0)},
+];
+const RCLS={common:'rc',rare:'rr',epic:'re',legendary:'rl'};
+const RTXT={common:'Common',rare:'Rare',epic:'Epic',legendary:'Legendary'};
+
+function renderGame(){
+  updateXP();
+  document.getElementById('ms-grid').innerHTML=MISSIONS.map(m=>{
+    const prog=m.g();const done=prog>=m.t;const pct=Math.min(100,Math.round(prog/m.t*100));
+    return`<div class="msc${done?' done':''}">
+      ${done?'<div class="mscheck">✓</div>':''}
+      <div class="msrar ${RCLS[m.r]}">${RTXT[m.r]}</div>
+      <div class="msico">${m.e}</div>
+      <div class="msnm">${m.n}</div>
+      <div class="msds">${m.d}</div>
+      <div class="msbar"><div class="msfill" style="width:${pct}%"></div></div>
+      <div class="mspr">${prog}/${m.t} (${pct}%)</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+// PHOTO BOOK
+// ══════════════════════════════════
+const PBGBG={'ภาคเหนือ':'#1a5832','ภาคใต้':'#0e4e43','ภาคกลาง':'#1a3570','ภาคตะวันออก':'#5c3a12','ภาคอีสาน':'#4a1a5c','ภาคตะวันตก':'#5c2215'};
+
+function renderPhotos(){
+  const grid=document.getElementById('pbg');
+  // Populate trip filter
+  const sel=document.getElementById('pb-filter');
+  const cv=sel.value;
+  sel.innerHTML='<option value="">ทุกทริป</option>';
+  db.trips.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;sel.appendChild(o);});
+  sel.value=cv;
+
+  const filter=sel.value;
+  const items=db.checkins.filter(c=>!filter||c.tripId===filter).sort((a,b)=>(b.date||'')>(a.date||'')?1:-1);
+
+  if(!items.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">📸</div><div class="et">ยังไม่มีสถานที่</div></div>';return;}
+
+  grid.innerHTML=items.map(ci=>{
+    const ph=(ci.photos||[])[0];
+    const reg=pvMap[ci.province]?.r||'ภาคกลาง';
+    const bg=PBGBG[reg]||'#1a3570';
+    if(ph)return`<div class="pbitem" onclick="openPV('${encodeURIComponent(ph)}','${esc(ci.place)}')" style="background:#111827"><img src="${ph}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0"><div class="pbov"></div><div class="pbcap">${esc(ci.place)}</div></div>`;
+    return`<div class="pbitem" style="background:${bg}28"><div class="pbico">${(typeMap[ci.type]||typeMap.other).e}</div><div class="pbnm">${esc(ci.place)}</div><div class="pbov"></div><div class="pbcap">${esc(ci.province)}</div></div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════
+// PHOTO VIEWER
+// ══════════════════════════════════
+function openPV(src,cap){
+  document.getElementById('pvimg').src=decodeURIComponent(src);
+  document.getElementById('pvcap').textContent=cap||'';
+  document.getElementById('pv').classList.add('open');
+}
+function closePV(){document.getElementById('pv').classList.remove('open');}
+
+// ══════════════════════════════════
+// GAS BACKEND
+// ══════════════════════════════════
+async function gasReq(method,params){
+  const url=db.user.gasUrl;if(!url)return null;
+  const uid=db.user.uid||'default';
+  try{
+    let r;
+    if(method==='GET'){r=await fetch(`${url}?${new URLSearchParams({...params,userId:uid})}`)}
+    else{r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...params,userId:uid})});}
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return await r.json();
+  }catch(e){console.warn('GAS:',e.message);return null;}
+}
+
+async function gasOne(params){
+  if(!db.user.gasUrl)return;
+  gasReq('POST',params).catch(()=>{});
+}
+
+async function doSync(){
+  if(!db.user.gasUrl){toast('ตั้งค่า GAS URL ก่อน 🔗','info');openSheet('sh-settings');return;}
+  showSyncBar('กำลัง sync ข้อมูล...');
+  // Sync metadata only (no photo blobs)
+  const payload={
+    checkins:db.checkins.map(c=>({...c,photos:undefined,photoCount:c.photos?.length||0})),
+    trips:db.trips.map(t=>({...t,photos:undefined,photoCount:t.photos?.length||0})),
+    user:{name:db.user.name,uid:db.user.uid,xp:db.xp}
+  };
+  const r=await gasReq('POST',{action:'saveAll',data:payload});
   hideSyncBar();
-  document.getElementById('sync-btn').classList.remove('syncing');
+  if(r?.success){
+    localStorage.setItem('ct_sync',new Date().toISOString());
+    document.getElementById('st-sync').textContent='ซิงค์ล่าสุด: เมื่อกี้';
+    toast('✅ Sync สำเร็จ!','ok');
+  }else{toast('❌ Sync ล้มเหลว — ตรวจสอบ URL','err');}
 }
 
-async function syncToGAS(data, type) {
-  if (!db.user.gasUrl) return;
-  if (type === 'checkin') {
-    gasRequest('POST', { action: 'saveCheckin', data }).catch(() => {});
-  }
+function showSyncBar(msg){
+  document.getElementById('syncmsg').textContent=msg;
+  document.getElementById('syncbar').classList.add('show');
+}
+function hideSyncBar(){
+  setTimeout(()=>document.getElementById('syncbar').classList.remove('show'),1500);
 }
 
-async function pullFromGAS() {
-  if (!db.user.gasUrl) return;
-  showSyncBar('กำลังดึงข้อมูลจาก Cloud...');
-  const result = await gasRequest('GET', { action: 'getAll' });
-  if (result?.success) {
-    if (result.checkins?.length) db.checkins = result.checkins;
-    if (result.trips?.length) db.trips = result.trips;
-    if (result.user?.name) db.user.name = result.user.name;
-    if (result.user?.xp) db.xp = result.user.xp;
-    saveDB(db);
-    refreshHome();
-    renderMapMarkers();
-    showToast('⬇️ ดึงข้อมูลจาก Cloud แล้ว!', 'success');
-  }
-  hideSyncBar();
-}
-
-function showSyncBar(msg) {
-  document.getElementById('sync-msg').textContent = msg;
-  document.getElementById('sync-bar').classList.add('show');
-}
-function hideSyncBar() {
-  setTimeout(() => document.getElementById('sync-bar').classList.remove('show'), 1500);
-}
-
-// ════════════════════════════════════════
+// ══════════════════════════════════
 // SETTINGS
-// ════════════════════════════════════════
-function openProfileEdit() {
-  closeSheet('sheet-settings');
-  document.getElementById('p-name').value = db.user.name || '';
-  setTimeout(() => openSheet('sheet-profile'), 200);
+// ══════════════════════════════════
+function saveProfile(){
+  const n=document.getElementById('p-name').value.trim();
+  if(!n){toast('❗ กรุณาใส่ชื่อ','err');return;}
+  db.user.name=n;dbSave();
+  closeSheet('sh-profile');renderHome();
+  document.getElementById('st-pname').textContent=n;
+  toast('💾 บันทึกโปรไฟล์แล้ว','ok');
 }
 
-function saveProfile() {
-  const name = document.getElementById('p-name').value.trim();
-  if (!name) { showToast('กรุณาใส่ชื่อ','error'); return; }
-  db.user.name = name;
-  saveDB(db);
-  closeSheet('sheet-profile');
-  refreshHome();
-  document.getElementById('si-profile-sub').textContent = name;
-  showToast('💾 บันทึกโปรไฟล์แล้ว','success');
+function saveGAS(){
+  const url=document.getElementById('gas-url').value.trim();
+  if(!url||!url.startsWith('https://')){toast('❗ URL ไม่ถูกต้อง','err');return;}
+  db.user.gasUrl=url;dbSave();
+  closeSheet('sh-gas');
+  document.getElementById('st-gas').textContent='เชื่อมต่อแล้ว ✅';
+  toast('🔗 บันทึก URL แล้ว!','ok');
+  doSync();
 }
 
-function openGASSetup() {
-  closeSheet('sheet-settings');
-  document.getElementById('gas-url').value = db.user.gasUrl || '';
-  document.getElementById('gas-uid').value = db.user.userId || '';
-  setTimeout(() => openSheet('sheet-gas'), 200);
+async function testGAS(){
+  const url=document.getElementById('gas-url').value.trim();
+  if(!url){toast('❗ ใส่ URL ก่อน','err');return;}
+  toast('🧪 กำลังทดสอบ...','info');
+  try{
+    const r=await fetch(`${url}?action=ping&userId=test`);
+    const d=await r.json();
+    if(d.status==='ok')toast('✅ เชื่อมต่อสำเร็จ! v'+d.version,'ok');
+    else toast('❌ Response ผิดปกติ','err');
+  }catch(e){toast('❌ '+e.message,'err');}
 }
 
-function saveGAS() {
-  const url = document.getElementById('gas-url').value.trim();
-  if (!url) { showToast('กรุณาใส่ URL','error'); return; }
-  db.user.gasUrl = url;
-  saveDB(db);
-  closeSheet('sheet-gas');
-  document.getElementById('si-gas-sub').textContent = 'เชื่อมต่อแล้ว ✅';
-  showToast('🔗 บันทึก URL แล้ว!','success');
-  syncWithGAS();
+function doExport(){
+  closeSheet('sh-settings');
+  try{
+    const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=`checkin_th_${new Date().toISOString().slice(0,10)}.json`;a.click();
+    toast('📥 Export สำเร็จ!','ok');
+  }catch(e){toast('❌ Export ล้มเหลว: '+e.message,'err');}
 }
 
-async function testGAS() {
-  const url = document.getElementById('gas-url').value.trim();
-  if (!url) { showToast('กรุณาใส่ URL ก่อน','error'); return; }
-  showToast('🧪 กำลังทดสอบ...','info');
-  try {
-    const res = await fetch(`${url}?action=ping&userId=test`);
-    const data = await res.json();
-    if (data.status === 'ok') showToast('✅ เชื่อมต่อสำเร็จ! v'+data.version,'success');
-    else showToast('❌ Response ไม่ถูกต้อง','error');
-  } catch(e) { showToast('❌ เชื่อมต่อไม่ได้: '+e.message,'error'); }
-}
-
-function exportData() {
-  closeSheet('sheet-settings');
-  const blob = new Blob([JSON.stringify(db, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `checkin_th_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  showToast('📥 Export สำเร็จ!','success');
-}
-
-function importData() {
-  closeSheet('sheet-settings');
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.json';
-  input.onchange = e => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const imported = JSON.parse(ev.target.result);
-        if (!imported.checkins) throw new Error('Invalid');
-        db = { ...newDB(), ...imported };
-        saveDB(db);
-        refreshHome(); renderMapMarkers();
-        showToast('✅ Import สำเร็จ!','success');
-      } catch { showToast('❌ ไฟล์ไม่ถูกต้อง','error'); }
+function doImport(){
+  closeSheet('sh-settings');
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(!Array.isArray(d.checkins))throw new Error('format');
+        db={...dbFresh(),...d};dbSave();
+        renderHome();renderMapMarkers();
+        toast('✅ Import สำเร็จ! '+d.checkins.length+' เช็คอิน','ok');
+      }catch{toast('❌ ไฟล์ไม่ถูกต้อง','err');}
     };
     reader.readAsText(e.target.files[0]);
   };
-  input.click();
+  inp.click();
 }
 
-function clearAllData() {
-  if (!confirm('⚠️ ล้างข้อมูลทั้งหมด?\nไม่สามารถกู้คืนได้!')) return;
-  localStorage.clear();
-  location.reload();
+function doClear(){
+  if(!confirm('⚠️ ล้างข้อมูลทั้งหมด?\nไม่สามารถกู้คืนได้!'))return;
+  closeSheet('sh-settings');
+  localStorage.clear();location.reload();
 }
 
-// ════════════════════════════════════════
+// ══════════════════════════════════
 // SHARE
-// ════════════════════════════════════════
-async function generateShareLink() {
-  if (db.user.gasUrl) {
-    const result = await gasRequest('POST', { action: 'createShareToken' });
-    if (result?.token) {
-      const url = `${db.user.gasUrl}?action=getPublicData&token=${result.token}`;
-      document.getElementById('share-url-display').textContent = url;
-      showToast('🔗 สร้างลิงก์แล้ว!','success');
+// ══════════════════════════════════
+async function doShare(){
+  if(db.user.gasUrl){
+    const r=await gasReq('POST',{action:'createShareToken'});
+    if(r?.token){
+      const url=`${db.user.gasUrl}?action=getPublicData&token=${r.token}`;
+      try{await navigator.clipboard.writeText(url);toast('🔗 คัดลอกลิงก์แล้ว! (หมดอายุ 30 วัน)','ok');}
+      catch{toast('ลิงก์: '+url,'info');}
       return;
     }
   }
-  // Fallback: local token
-  const token = btoa(Date.now()+'_'+Math.random()).replace(/=/g,'').slice(0,16);
-  const url = `${window.location.href}?share=${token}`;
-  document.getElementById('share-url-display').textContent = url;
-  showToast('🔗 สร้างลิงก์แล้ว (Local)','info');
+  const url=window.location.href;
+  try{await navigator.clipboard.writeText(url);toast('📋 คัดลอก URL นี้แล้ว','ok');}
+  catch{toast('แชร์: '+url,'info');}
 }
 
-function copyShareLink() {
-  const url = document.getElementById('share-url-display').textContent;
-  if (url.includes('กด')) { showToast('กรุณาสร้างลิงก์ก่อน','error'); return; }
-  navigator.clipboard.writeText(url).then(() => showToast('📋 คัดลอกแล้ว!','success'));
-}
-
-// ════════════════════════════════════════
-// SEARCH
-// ════════════════════════════════════════
-function handleSearch(val) {
-  if (!val) return;
-  const prov = PROVINCES.find(p => p.n.includes(val));
-  if (prov && map && currentPanel === 'map') map.setView([prov.lat, prov.lng], 10);
-}
-
-// ════════════════════════════════════════
-// TOAST
-// ════════════════════════════════════════
-let toastTimer;
-function showToast(msg, type='success') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast show ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
-}
-
-// ════════════════════════════════════════
-// DATE HELPERS
-// ════════════════════════════════════════
-const MONTHS_TH = ['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
-
-function formatDateTH(d) {
-  if (!d) return '-';
-  const [y,m,day] = d.split('-');
-  return `${parseInt(day)} ${MONTHS_TH[parseInt(m)]} ${parseInt(y)+543}`;
-}
-
-function formatDateShort(d) {
-  if (!d) return '-';
-  const [y,m,day] = d.split('-');
-  return `${parseInt(day)} ${MONTHS_TH[parseInt(m)]}`;
-}
-
-// ════════════════════════════════════════
+// ══════════════════════════════════
 // PWA
-// ════════════════════════════════════════
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault(); deferredPrompt = e;
-  document.getElementById('pwa-hint').style.display = 'block';
-});
+// ══════════════════════════════════
+let pwaDef;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();pwaDef=e;document.getElementById('pwa-tip').style.display='block';});
+function pwaInstall(){if(pwaDef){pwaDef.prompt();pwaDef.userChoice.then(()=>{pwaDef=null;document.getElementById('pwa-tip').style.display='none';});}}
 
-function installPWA() {
-  if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(() => { deferredPrompt = null; document.getElementById('pwa-hint').style.display = 'none'; }); }
+// ══════════════════════════════════
+// TOAST
+// ══════════════════════════════════
+let toastT;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='toast show '+type;
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>{el.className='toast';},3200);
 }
 
-// ════════════════════════════════════════
+// ══════════════════════════════════
+// DATE HELPERS
+// ══════════════════════════════════
+const MN=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function dateTH(d){if(!d)return'—';try{const[y,m,day]=d.split('-');return`${+day} ${MN[+m]} ${+y+543}`;}catch{return d;}}
+function dateShort(d){if(!d)return'—';try{const[,m,day]=d.split('-');return`${+day} ${MN[+m]}`;}catch{return d;}}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ══════════════════════════════════
 // INIT
-// ════════════════════════════════════════
-async function init() {
-  document.getElementById('loading-msg').textContent = 'กำลังโหลดข้อมูล...';
+// ══════════════════════════════════
+function init(){
+  document.getElementById('splsub').textContent='กำลังโหลด...';
 
-  populateProvinceSelect();
+  // Init province select now (lazy — done in initCiForm)
+  // Settings display
+  const nm=db.user.name||'นักเดินทาง';
+  document.getElementById('st-pname').textContent=nm;
+  document.getElementById('p-name').value=nm;
+  if(db.user.gasUrl){document.getElementById('st-gas').textContent='เชื่อมต่อแล้ว ✅';document.getElementById('gas-url').value=db.user.gasUrl;}
+  document.getElementById('gas-uid').value=db.user.uid||'';
+  const ls=localStorage.getItem('ct_sync');
+  if(ls)document.getElementById('st-sync').textContent='ซิงค์ล่าสุด: '+dateTH(ls.slice(0,10));
 
-  document.getElementById('loading-msg').textContent = 'กำลังสร้างแผนที่...';
-  await new Promise(r => setTimeout(r, 300));
+  // Home
+  renderHome();
 
-  initMap();
-  refreshHome();
+  // Map (init after render)
+  requestAnimationFrame(()=>{
+    initMap();
+    setTimeout(()=>{
+      document.getElementById('splash').classList.add('out');
+      setTimeout(()=>{const s=document.getElementById('splash');if(s)s.remove();},600);
+    },700);
+  });
 
-  // Update settings display
-  if (db.user.name) document.getElementById('si-profile-sub').textContent = db.user.name;
-  if (db.user.gasUrl) document.getElementById('si-gas-sub').textContent = 'เชื่อมต่อแล้ว ✅';
-
-  const lastSync = localStorage.getItem(LAST_SYNC_KEY);
-  if (lastSync) document.getElementById('si-sync-sub').textContent = 'ซิงค์ล่าสุด: '+formatDateTH(lastSync.slice(0,10));
-
-  // Auto-pull if GAS connected
-  if (db.user.gasUrl) {
-    document.getElementById('loading-msg').textContent = 'กำลังดึงข้อมูล Cloud...';
-    await pullFromGAS();
-  }
-
-  // Hide loading
-  setTimeout(() => {
-    document.getElementById('loading').classList.add('hide');
-    setTimeout(() => document.getElementById('loading').remove(), 600);
-  }, 400);
-
-  // Close dropdowns on outside click
-  document.addEventListener('click', e => {
-    if (!e.target.closest('#ci-place') && !e.target.closest('#ac-drop')) {
-      document.getElementById('ac-drop').classList.remove('open');
+  // Close AC on outside click
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('#ci-place')&&!e.target.closest('#ci-ac')){
+      document.getElementById('ci-ac').classList.remove('open');
     }
   });
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded',init);
 </script>
-
-<!-- PWA Service Worker Registration -->
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('data:application/javascript,'+encodeURIComponent(`
-    const CACHE='checkin-th-v2';
-    const ASSETS=['/'];
-    self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));
-    self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));
-  `)).catch(()=>{});
-}
-</script>
-
 </body>
 </html>
